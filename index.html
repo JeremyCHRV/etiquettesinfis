@@ -34,6 +34,16 @@
     --label-order-barcode: 1;
     --label-order-code: 2;
     --label-order-name: 3;
+
+    /* Alignement de la grille de la planche (compense un décentrage réel à l'impression) */
+    --sheet-offset-x: 0mm;
+    --sheet-offset-y: 0mm;
+    --sheet-col-gap: 0mm;
+    --sheet-row-gap: 0mm;
+    --sheet-offset-x-preview: 0mm;
+    --sheet-offset-y-preview: 0mm;
+    --sheet-col-gap-preview: 0mm;
+    --sheet-row-gap-preview: 0mm;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -303,6 +313,10 @@
     display:grid;
     grid-template-columns:repeat(2,1fr);
     grid-template-rows:repeat(5,1fr);
+    column-gap:var(--sheet-col-gap-preview);
+    row-gap:var(--sheet-row-gap-preview);
+    margin-left:var(--sheet-offset-x-preview);
+    margin-top:var(--sheet-offset-y-preview);
     background:#fff;
     box-shadow:0 1px 3px rgba(0,0,0,.08);
   }
@@ -408,6 +422,10 @@
       width:50mm; height:60mm;
       grid-template-columns:repeat(2,1fr);
       grid-template-rows:repeat(5,1fr);
+      column-gap:var(--sheet-col-gap);
+      row-gap:var(--sheet-row-gap);
+      margin-left:var(--sheet-offset-x);
+      margin-top:var(--sheet-offset-y);
       page-break-after:always;
       break-after:page;
     }
@@ -549,7 +567,11 @@ const DEFAULT_LAYOUT = {
   barcodeWidthPercent: 90,
   codeFontPt: 5.5,
   nameFontPt: 4.3,
-  gapMm: 0.3
+  gapMm: 0.3,
+  sheetOffsetXMm: 0,
+  sheetOffsetYMm: 0,
+  sheetColGapMm: 0,
+  sheetRowGapMm: 0
 };
 let layoutConfig = { ...DEFAULT_LAYOUT, order: [...DEFAULT_LAYOUT.order] };
 
@@ -582,6 +604,15 @@ function applyLayoutCSS(){
   root.setProperty('--label-order-barcode', layoutConfig.order.indexOf('barcode') + 1);
   root.setProperty('--label-order-code', layoutConfig.order.indexOf('code') + 1);
   root.setProperty('--label-order-name', layoutConfig.order.indexOf('name') + 1);
+
+  root.setProperty('--sheet-offset-x', layoutConfig.sheetOffsetXMm + 'mm');
+  root.setProperty('--sheet-offset-y', layoutConfig.sheetOffsetYMm + 'mm');
+  root.setProperty('--sheet-col-gap', layoutConfig.sheetColGapMm + 'mm');
+  root.setProperty('--sheet-row-gap', layoutConfig.sheetRowGapMm + 'mm');
+  root.setProperty('--sheet-offset-x-preview', (layoutConfig.sheetOffsetXMm * 3) + 'mm');
+  root.setProperty('--sheet-offset-y-preview', (layoutConfig.sheetOffsetYMm * 3) + 'mm');
+  root.setProperty('--sheet-col-gap-preview', (layoutConfig.sheetColGapMm * 3) + 'mm');
+  root.setProperty('--sheet-row-gap-preview', (layoutConfig.sheetRowGapMm * 3) + 'mm');
 }
 
 function genId(){ return 'a_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
@@ -876,6 +907,28 @@ function layoutPanelTemplate(){
         </div>
       </div>
 
+      <div style="margin-top:24px;">
+        <label style="display:block;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);margin-bottom:8px;">Alignement de la planche (compense un décentrage réel à l'impression)</label>
+        <div class="field-grid">
+          <div class="field">
+            <label>Décalage horizontal (<span id="ly-offx-val">${layoutConfig.sheetOffsetXMm}</span>mm)</label>
+            <input class="layout-slider" type="range" id="ly-offx" min="-5" max="5" step="0.1" value="${layoutConfig.sheetOffsetXMm}">
+          </div>
+          <div class="field">
+            <label>Décalage vertical (<span id="ly-offy-val">${layoutConfig.sheetOffsetYMm}</span>mm)</label>
+            <input class="layout-slider" type="range" id="ly-offy" min="-5" max="5" step="0.1" value="${layoutConfig.sheetOffsetYMm}">
+          </div>
+          <div class="field">
+            <label>Espace entre les 2 colonnes (<span id="ly-colgap-val">${layoutConfig.sheetColGapMm}</span>mm)</label>
+            <input class="layout-slider" type="range" id="ly-colgap" min="0" max="3" step="0.1" value="${layoutConfig.sheetColGapMm}">
+          </div>
+          <div class="field">
+            <label>Espace entre les 5 rangées (<span id="ly-rowgap-val">${layoutConfig.sheetRowGapMm}</span>mm)</label>
+            <input class="layout-slider" type="range" id="ly-rowgap" min="0" max="3" step="0.1" value="${layoutConfig.sheetRowGapMm}">
+          </div>
+        </div>
+      </div>
+
       <div class="sheet-frame" style="margin-top:20px;">
         <div class="frame-label">Aperçu d'une étiquette — échelle 3×</div>
         <div style="width:75mm;height:90mm;display:flex;align-items:center;justify-content:center;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08);">
@@ -883,10 +936,18 @@ function layoutPanelTemplate(){
         </div>
       </div>
 
+      <div class="sheet-frame" style="margin-top:14px;">
+        <div class="frame-label">Aperçu de la planche complète (2×5) — échelle 3×, avec alignement</div>
+        <div style="overflow:auto;padding:6px;">
+          <div class="sheet-preview" id="layoutSheetPreview"></div>
+        </div>
+      </div>
+
       <div class="field-actions">
         <button class="btn btn-primary" id="btnSaveLayout">Enregistrer pour tout le monde</button>
         <button class="btn btn-ghost" id="btnResetLayout">Réinitialiser</button>
         <button class="btn btn-ghost" id="btnCloseLayout">Fermer</button>
+
       </div>
     </div>
   `;
@@ -916,7 +977,36 @@ function wireLayoutPanel(){
       fixSvgViewBox(svg);
     }catch(e){}
   }
+
+  function renderLayoutSheetPreview(){
+    const wrap = document.getElementById('layoutSheetPreview');
+    if(!wrap) return;
+    wrap.innerHTML = '';
+    if(!barcodeLibReady()) return;
+    const svgNs = 'http://www.w3.org/2000/svg';
+    for(let i=0;i<10;i++){
+      const cell = document.createElement('div');
+      cell.className = 'sheet-cell';
+      const svg = document.createElementNS(svgNs,'svg');
+      cell.appendChild(svg);
+      const codeDiv = document.createElement('div');
+      codeDiv.className = 'cell-code';
+      codeDiv.textContent = fullCode(sampleAgent);
+      cell.appendChild(codeDiv);
+      const nameDiv = document.createElement('div');
+      nameDiv.className = 'cell-name';
+      nameDiv.textContent = sampleAgent.nom + ' ' + sampleAgent.prenom;
+      cell.appendChild(nameDiv);
+      wrap.appendChild(cell);
+      try{
+        JsBarcode(svg, barcodeValue(sampleAgent), { format:'CODE128', displayValue:false, margin:2, width:1.4, height:34 });
+        fixSvgViewBox(svg);
+      }catch(e){}
+    }
+  }
+
   renderLayoutPreview();
+  renderLayoutSheetPreview();
 
   document.querySelectorAll('#layoutOrderList [data-move]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -931,19 +1021,23 @@ function wireLayoutPanel(){
     });
   });
 
-  const bindSlider = (id, valId, key, isFloat) => {
+  const bindSlider = (id, valId, key, isFloat, onChange) => {
     document.getElementById(id).addEventListener('input', (e) => {
       const v = isFloat ? parseFloat(e.target.value) : parseInt(e.target.value, 10);
       layoutConfig[key] = v;
       document.getElementById(valId).textContent = v;
       applyLayoutCSS();
-      renderLayoutPreview();
+      if(onChange) onChange();
     });
   };
-  bindSlider('ly-barcode', 'ly-barcode-val', 'barcodeWidthPercent', false);
-  bindSlider('ly-gap', 'ly-gap-val', 'gapMm', true);
-  bindSlider('ly-code-size', 'ly-code-size-val', 'codeFontPt', true);
-  bindSlider('ly-name-size', 'ly-name-size-val', 'nameFontPt', true);
+  bindSlider('ly-barcode', 'ly-barcode-val', 'barcodeWidthPercent', false, renderLayoutPreview);
+  bindSlider('ly-gap', 'ly-gap-val', 'gapMm', true, renderLayoutPreview);
+  bindSlider('ly-code-size', 'ly-code-size-val', 'codeFontPt', true, renderLayoutPreview);
+  bindSlider('ly-name-size', 'ly-name-size-val', 'nameFontPt', true, renderLayoutPreview);
+  bindSlider('ly-offx', 'ly-offx-val', 'sheetOffsetXMm', true, null);
+  bindSlider('ly-offy', 'ly-offy-val', 'sheetOffsetYMm', true, null);
+  bindSlider('ly-colgap', 'ly-colgap-val', 'sheetColGapMm', true, null);
+  bindSlider('ly-rowgap', 'ly-rowgap-val', 'sheetRowGapMm', true, null);
 
   document.getElementById('btnSaveLayout').addEventListener('click', async () => {
     const ok = await saveLayoutConfig();
