@@ -440,8 +440,8 @@
    4. Collez-les ci-dessous. La clé "anon public" est faite pour être visible côté client,
       ce n'est pas un secret à cacher — c'est la politique RLS (dans le script SQL) qui
       définit ce que cette clé a le droit de faire. */
-const SUPABASE_URL = "https://rjocrdbspvetpjeellce.supabase.co/rest/v1/";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqb2NyZGJzcHZldHBqZWVsbGNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxMjEyNDcsImV4cCI6MjEwMjY5NzI0N30.-h-sQjUggzMKotgBvZCW8Z8qEf62MJehET2aTvwdf84";
+const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co";
+const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
 const SUPABASE_CONFIGURED = !SUPABASE_URL.includes('YOUR-PROJECT') && !SUPABASE_ANON_KEY.includes('YOUR-ANON');
 
 async function supabaseGetRow(id){
@@ -987,7 +987,7 @@ function renderAll(){
   renderSidebar();
   renderMain();
   const agent = agents.find(a => a.id === selectedId);
-  if(agent && !addFormOpen && editingId !== agent.id){ wireDetailButtons(agent); }
+  if(agent && !addFormOpen){ wireDetailButtons(agent); }
 }
 
 document.getElementById('searchInput').addEventListener('input', renderSidebar);
