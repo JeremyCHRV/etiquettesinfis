@@ -509,8 +509,7 @@ const SUPABASE_URL = SUPABASE_URL_RAW.trim().replace(/\/rest\/v1\/?$/i, '').repl
 const SUPABASE_CONFIGURED = !SUPABASE_URL_RAW.includes('YOUR-PROJECT') && !SUPABASE_ANON_KEY.includes('YOUR-ANON');
 
 /* Format du code-barres et valeur encodée (les 4 lettres du code, sans préfixe). */
-const BARCODE_FORMAT = "CODE39"; // "Code 139" n'existe pas comme norme — Code 39 est la norme la plus proche et très répandue
-const BARCODE_PREFIX = "PL="; // ajouté devant les 4 lettres, à l'intérieur du code-barres lui-même
+const BARCODE_FORMAT = "CODE128";
 
 async function supabaseGetRow(id){
   const url = `${SUPABASE_URL}/rest/v1/app_state?id=eq.${encodeURIComponent(id)}&select=data`;
@@ -666,7 +665,7 @@ function normalize(s){
   return (s||'').toString().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
 }
 function padNum(n){ return String(n).padStart(5,'0'); }
-function barcodeValue(a){ return BARCODE_PREFIX + a.code; } // valeur réellement encodée dans le code-barres
+function barcodeValue(a){ return a.code; } // valeur réellement encodée dans le code-barres (juste les 4 lettres)
 function fullCode(a){ return a.code + padNum(a.numero); }
 
 function codeCounts(){
