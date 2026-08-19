@@ -441,8 +441,8 @@
    4. Collez-les ci-dessous. La clé "anon public" est faite pour être visible côté client,
       ce n'est pas un secret à cacher — c'est la politique RLS (dans le script SQL) qui
       définit ce que cette clé a le droit de faire. */
-const SUPABASE_URL_RAW = "https://YOUR-PROJECT.supabase.co";
-const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
+const SUPABASE_URL_RAW = "https://rjocrdbspvetpjeellce.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqb2NyZGJzcHZldHBqZWVsbGNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxMjEyNDcsImV4cCI6MjEwMjY5NzI0N30.-h-sQjUggzMKotgBvZCW8Z8qEf62MJehET2aTvwdf84";
 // Tolère qu'on ait collé l'URL avec un "/rest/v1" ou un "/" final déjà présent —
 // évite un chemin dupliqué du type "/rest/v1/rest/v1/app_state".
 const SUPABASE_URL = SUPABASE_URL_RAW.trim().replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/,'');
