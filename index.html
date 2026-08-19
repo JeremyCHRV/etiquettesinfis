@@ -347,6 +347,9 @@
     order:var(--label-order-name);
     line-height:1.1;
   }
+  /* Même espacement ciblé que l'impression, à l'échelle 3× (0.2mm -> 0.6mm) */
+  .sheet-cell:nth-child(5), .sheet-cell:nth-child(6){ margin-top:0.6mm; }
+  .sheet-cell:nth-child(7), .sheet-cell:nth-child(8){ margin-top:0.6mm; }
 
   .counter-line{
     display:flex;
@@ -440,6 +443,9 @@
     .p-cell svg{ width:var(--label-barcode-width); height:auto; order:var(--label-order-barcode); }
     .p-cell .p-code{ font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:var(--label-code-size); order:var(--label-order-code); }
     .p-cell .p-name{ font-family:Inter,sans-serif; font-size:var(--label-name-size); text-transform:uppercase; text-align:center; line-height:1.05; color:#000; order:var(--label-order-name); }
+    /* Espacement additionnel ciblé : rangée 3 (items 5-6) = gap rangées 2-3 ; rangée 4 (items 7-8) = gap rangées 3-4 */
+    .p-cell:nth-child(5), .p-cell:nth-child(6){ margin-top:0.2mm; }
+    .p-cell:nth-child(7), .p-cell:nth-child(8){ margin-top:0.2mm; }
   }
 </style>
 </head>
