@@ -420,6 +420,14 @@
   @media print{
     body > *:not(#printSheet){ display:none !important; }
     #printSheet{ display:block !important; }
+    .sheet-page-frame{
+      width:50mm; height:60mm;
+      overflow:hidden;
+      box-sizing:border-box;
+      page-break-after:always;
+      break-after:page;
+    }
+    .sheet-page-frame:last-child{ page-break-after:auto; break-after:auto; }
     .sheet-page{
       display:grid !important;
       width:50mm; height:60mm;
@@ -429,10 +437,8 @@
       row-gap:var(--sheet-row-gap);
       margin-left:var(--sheet-offset-x);
       margin-top:var(--sheet-offset-y);
-      page-break-after:always;
-      break-after:page;
+      box-sizing:border-box;
     }
-    .sheet-page:last-child{ page-break-after:auto; break-after:auto; }
     @page{ size:50mm 60mm; margin:0; }
     html,body{ margin:0; padding:0; }
     .p-cell{
@@ -504,6 +510,7 @@ const SUPABASE_CONFIGURED = !SUPABASE_URL_RAW.includes('YOUR-PROJECT') && !SUPAB
 
 /* Format du code-barres et valeur encodée (les 4 lettres du code, sans préfixe). */
 const BARCODE_FORMAT = "CODE39"; // "Code 139" n'existe pas comme norme — Code 39 est la norme la plus proche et très répandue
+const BARCODE_PREFIX = "PL="; // ajouté devant les 4 lettres, à l'intérieur du code-barres lui-même
 
 async function supabaseGetRow(id){
   const url = `${SUPABASE_URL}/rest/v1/app_state?id=eq.${encodeURIComponent(id)}&select=data`;
@@ -659,7 +666,7 @@ function normalize(s){
   return (s||'').toString().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
 }
 function padNum(n){ return String(n).padStart(5,'0'); }
-function barcodeValue(a){ return a.code; } // valeur réellement encodée dans le code-barres
+function barcodeValue(a){ return BARCODE_PREFIX + a.code; } // valeur réellement encodée dans le code-barres
 function fullCode(a){ return a.code + padNum(a.numero); }
 
 function codeCounts(){
@@ -1264,6 +1271,8 @@ function printSheet(agent, qty){
 
   for(let p=0; p<qty; p++){
     const pageNum = startNum + p;
+    const frame = document.createElement('div');
+    frame.className = 'sheet-page-frame';
     const page = document.createElement('div');
     page.className = 'sheet-page';
     for(let i=0;i<10;i++){
@@ -1285,7 +1294,8 @@ function printSheet(agent, qty){
         fixSvgViewBox(svg);
       }catch(e){}
     }
-    holder.appendChild(page);
+    frame.appendChild(page);
+    holder.appendChild(frame);
   }
 
   // window.print() must be called synchronously, in direct response to the
