@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Étiquettes Infis Glims</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.12.3/JsBarcode.all.min.js"></script>
+<style>
+  :root{
+    --bg:#EEF2ED;
+    --surface:#FFFFFF;
+    --surface-2:#F6F8F4;
+    --ink:#16261F;
+    --ink-soft:#4C5D53;
+    --border:#D8DED4;
+    --amber:#C4831E;
+    --amber-dark:#9C6714;
+    --teal:#2F6F62;
+    --danger:#B23A3A;
+    --danger-bg:#F7E9E7;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  #app{
+    display:grid;
+    grid-template-columns: 340px 1fr;
+    min-height:100vh;
+  }
+  @media (max-width: 860px){
+    #app{ grid-template-columns: 1fr; }
+  }
+
+  /* ---------- Sidebar ---------- */
+  #sidebar{
+    background:var(--surface);
+    border-right:1px solid var(--border);
+    display:flex;
+    flex-direction:column;
+    max-height:100vh;
+  }
+  .side-head{
+    padding:20px 18px 14px 18px;
+    border-bottom:1px solid var(--border);
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--amber-dark);
+    font-weight:600;
+    margin:0 0 4px 0;
+  }
+  .side-head h1{
+    font-family:'Zilla Slab',serif;
+    font-size:22px;
+    font-weight:700;
+    margin:0;
+    color:var(--ink);
+  }
+  .side-head p{
+    margin:6px 0 0 0;
+    font-size:12.5px;
+    color:var(--ink-soft);
+  }
+  .side-head .shared-note{
+    font-size:11px;
+    color:var(--amber-dark);
+    background:#FBF1E1;
+    border:1px solid #EEDCBB;
+    border-radius:6px;
+    padding:5px 8px;
+    margin-top:10px;
+  }
+  .search-wrap{ padding:12px 18px; border-bottom:1px solid var(--border); }
+  .search-wrap input{
+    width:100%;
+    padding:9px 12px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    font-family:'Inter',sans-serif;
+    font-size:13.5px;
+    background:var(--surface-2);
+    color:var(--ink);
+  }
+  .search-wrap input:focus{ outline:2px solid var(--teal); outline-offset:1px; }
+
+  #agent-list{
+    flex:1;
+    overflow-y:auto;
+    padding:6px 10px;
+  }
+  .agent-row{
+    width:100%;
+    text-align:left;
+    background:none;
+    border:1px solid transparent;
+    border-radius:8px;
+    padding:9px 10px;
+    margin-bottom:2px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    font-family:'Inter',sans-serif;
+  }
+  .agent-row:hover{ background:var(--surface-2); }
+  .agent-row.active{ background:#EAF2ED; border-color:var(--teal); }
+  .agent-row:focus-visible{ outline:2px solid var(--teal); outline-offset:1px; }
+  .agent-name{ font-size:13.5px; font-weight:600; color:var(--ink); line-height:1.25; }
+  .agent-sub{ font-size:11.5px; color:var(--ink-soft); margin-top:1px; }
+  .agent-code-badge{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    font-weight:600;
+    background:var(--ink);
+    color:#fff;
+    padding:3px 6px;
+    border-radius:5px;
+    white-space:nowrap;
+  }
+  .dup-flag{ color:var(--danger); font-size:13px; margin-right:4px; }
+  .empty-note{ padding:16px; font-size:13px; color:var(--ink-soft); }
+
+  .side-foot{ padding:12px 18px; border-top:1px solid var(--border); }
+  .btn{
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:13.5px;
+    padding:9px 14px;
+    border-radius:8px;
+    border:1px solid transparent;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+  }
+  .btn:focus-visible{ outline:2px solid var(--teal); outline-offset:2px; }
+  .btn-primary{ background:var(--teal); color:#fff; }
+  .btn-primary:hover{ background:#265a4f; }
+  .btn-amber{ background:var(--amber); color:#fff; }
+  .btn-amber:hover{ background:var(--amber-dark); }
+  .btn-ghost{ background:var(--surface-2); color:var(--ink); border-color:var(--border); }
+  .btn-ghost:hover{ background:#eceee9; }
+  .btn-danger{ background:var(--danger-bg); color:var(--danger); border-color:#E7C9C5; }
+  .btn-danger:hover{ background:#f1dbd8; }
+  .btn-block{ width:100%; }
+  .btn:disabled{ opacity:.45; cursor:not-allowed; }
+
+  /* ---------- Main ---------- */
+  #main{ padding:28px 34px 60px 34px; overflow-y:auto; }
+  .main-inner{ max-width:760px; margin:0 auto; }
+
+  .empty-state{
+    text-align:center;
+    padding:80px 20px;
+    color:var(--ink-soft);
+  }
+  .empty-state h2{ font-family:'Zilla Slab',serif; color:var(--ink); font-size:22px; margin-bottom:6px;}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:22px 24px;
+    margin-bottom:20px;
+  }
+  .card h2{
+    font-family:'Zilla Slab',serif;
+    font-size:19px;
+    margin:0 0 14px 0;
+    color:var(--ink);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .field-grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:14px;
+  }
+  .field-grid.cols-4{ grid-template-columns:1fr 1fr 90px 130px; }
+  @media (max-width:600px){ .field-grid.cols-4{ grid-template-columns:1fr 1fr; } }
+  .field label{
+    display:block;
+    font-size:11.5px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    color:var(--ink-soft);
+    margin-bottom:5px;
+  }
+  .field input{
+    width:100%;
+    padding:9px 10px;
+    border-radius:7px;
+    border:1px solid var(--border);
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    background:var(--surface-2);
+    color:var(--ink);
+  }
+  .field input.mono{ font-family:'IBM Plex Mono',monospace; letter-spacing:.05em; text-transform:uppercase; }
+  .field input:focus{ outline:2px solid var(--teal); outline-offset:1px; background:#fff; }
+  .field-actions{ display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
+
+  .warning-note{
+    background:var(--danger-bg);
+    color:var(--danger);
+    border:1px solid #E7C9C5;
+    border-radius:7px;
+    padding:9px 12px;
+    font-size:12.5px;
+    margin-bottom:14px;
+  }
+
+  .preview-row{
+    display:flex;
+    gap:26px;
+    align-items:flex-start;
+    flex-wrap:wrap;
+  }
+  .single-preview{
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:16px 18px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+    min-width:220px;
+  }
+  .single-preview svg{ width:190px; height:auto; }
+  .single-preview .code-line{
+    font-family:'IBM Plex Mono',monospace;
+    font-weight:700;
+    font-size:15px;
+    letter-spacing:.03em;
+  }
+  .single-preview .name-line{
+    font-size:12px;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    text-align:center;
+  }
+
+  .sheet-frame{
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:14px;
+    background:var(--surface-2);
+  }
+  .sheet-frame .frame-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+    margin-bottom:10px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+  }
+  .sheet-preview{
+    width:150mm; height:180mm; /* 3x scale of 50x60mm */
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    grid-template-rows:repeat(5,1fr);
+    background:#fff;
+    box-shadow:0 1px 3px rgba(0,0,0,.08);
+  }
+  .sheet-cell{
+    border:0.75pt dashed #B9C2B4;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:2mm;
+    overflow:hidden;
+    gap:1mm;
+  }
+  .sheet-cell svg{ width:88%; height:auto; }
+  .sheet-cell .cell-code{
+    font-family:'IBM Plex Mono',monospace;
+    font-weight:700;
+    font-size:9pt;
+    letter-spacing:.02em;
+  }
+  .sheet-cell .cell-name{
+    font-family:'Inter',sans-serif;
+    font-size:6.5pt;
+    text-transform:uppercase;
+    text-align:center;
+    color:#333;
+    line-height:1.1;
+  }
+
+  .counter-line{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    margin-top:4px;
+  }
+  .counter-line .big-num{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:26px;
+    font-weight:700;
+    color:var(--teal);
+  }
+  .counter-line .hint{ font-size:12px; color:var(--ink-soft); }
+
+  .toast{
+    position:fixed;
+    bottom:20px;
+    right:20px;
+    background:var(--ink);
+    color:#fff;
+    padding:11px 16px;
+    border-radius:8px;
+    font-size:13.5px;
+    box-shadow:0 4px 14px rgba(0,0,0,.2);
+    opacity:0;
+    transform:translateY(6px);
+    transition:opacity .2s ease, transform .2s ease;
+    pointer-events:none;
+    z-index:50;
+  }
+  .toast.show{ opacity:1; transform:translateY(0); }
+
+  /* ---------- Confirmation modal ---------- */
+  .modal-overlay{
+    display:none;
+    position:fixed; inset:0;
+    background:rgba(22,38,31,.45);
+    align-items:center; justify-content:center;
+    z-index:100;
+    padding:20px;
+  }
+  .modal-overlay.show{ display:flex; }
+  .modal-box{
+    background:#fff;
+    border-radius:12px;
+    padding:22px 24px;
+    max-width:380px;
+    width:100%;
+    box-shadow:0 12px 32px rgba(0,0,0,.25);
+  }
+  .modal-box h3{
+    font-family:'Zilla Slab',serif;
+    font-size:18px;
+    margin:0 0 10px 0;
+    color:var(--ink);
+  }
+  .modal-box p{
+    font-size:13.5px;
+    color:var(--ink-soft);
+    line-height:1.5;
+    margin:0 0 18px 0;
+  }
+
+  /* ---------- Print sheet (hidden on screen) ---------- */
+  #printSheet{ display:none; }
+
+  @media print{
+    body > *:not(#printSheet){ display:none !important; }
+    #printSheet{ display:block !important; }
+    .sheet-page{
+      display:grid !important;
+      width:50mm; height:60mm;
+      grid-template-columns:repeat(2,1fr);
+      grid-template-rows:repeat(5,1fr);
+      page-break-after:always;
+      break-after:page;
+    }
+    .sheet-page:last-child{ page-break-after:auto; break-after:auto; }
+    @page{ size:50mm 60mm; margin:0; }
+    html,body{ margin:0; padding:0; }
+    .p-cell{
+      border:0.15mm dashed #aaa;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      padding:0.4mm; overflow:hidden; gap:0.3mm; box-sizing:border-box;
+    }
+    .p-cell svg{ width:90%; height:auto; }
+    .p-cell .p-code{ font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:5.5pt; }
+    .p-cell .p-name{ font-family:Inter,sans-serif; font-size:4.3pt; text-transform:uppercase; text-align:center; line-height:1.05; color:#000; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <aside id="sidebar">
+    <div class="side-head">
+      <p class="eyebrow">Infis Glims</p>
+      <h1>Étiquettes agents</h1>
+      <p>Code-barres Code128 · planche 2×5</p>
+      <p class="shared-note">🔗 Base partagée (Supabase) — visible et modifiable par toute personne ayant accès à ce site.</p>
+      <p class="shared-note" id="configWarning" style="display:none;background:#F7E9E7;color:var(--danger);border-color:#E7C9C5;">⚠ Supabase non configuré — voir les instructions de déploiement (README).</p>
+    </div>
+    <div class="search-wrap">
+      <input id="searchInput" type="text" placeholder="Rechercher un agent, un code…">
+    </div>
+    <div id="agent-list"></div>
+    <div class="side-foot">
+      <button class="btn btn-amber btn-block" id="btnShowAdd">+ Ajouter un agent</button>
+    </div>
+  </aside>
+
+  <main id="main"><div class="main-inner" id="mainInner"></div></main>
+</div>
+
+<div id="printSheet"></div>
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box">
+    <h3 id="modalTitle">Confirmer l'impression</h3>
+    <p id="modalMessage"></p>
+    <div class="field-actions" style="justify-content:flex-end;">
+      <button class="btn btn-ghost" id="modalCancelBtn">Annuler</button>
+      <button class="btn btn-primary" id="modalConfirmBtn">Confirmer l'impression</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===================== Config Supabase ===================== */
+/* 1. Créez un projet gratuit sur https://supabase.com
+   2. Dans SQL Editor, exécutez le script fourni (supabase_schema.sql) pour créer la table.
+   3. Dans Project Settings > API, copiez "Project URL" et la clé "anon public".
+   4. Collez-les ci-dessous. La clé "anon public" est faite pour être visible côté client,
+      ce n'est pas un secret à cacher — c'est la politique RLS (dans le script SQL) qui
+      définit ce que cette clé a le droit de faire. */
+const SUPABASE_URL = "https://rjocrdbspvetpjeellce.supabase.co/rest/v1/";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqb2NyZGJzcHZldHBqZWVsbGNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxMjEyNDcsImV4cCI6MjEwMjY5NzI0N30.-h-sQjUggzMKotgBvZCW8Z8qEf62MJehET2aTvwdf84";
+const SUPABASE_CONFIGURED = !SUPABASE_URL.includes('YOUR-PROJECT') && !SUPABASE_ANON_KEY.includes('YOUR-ANON');
+
+async function supabaseGetRow(id){
+  const url = `${SUPABASE_URL}/rest/v1/app_state?id=eq.${encodeURIComponent(id)}&select=data`;
+  const res = await fetch(url, {
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+    }
+  });
+  if(!res.ok) throw new Error(`Supabase GET ${res.status}`);
+  const rows = await res.json();
+  return rows.length ? rows[0].data : null;
+}
+
+async function supabaseUpsertRow(id, data){
+  const url = `${SUPABASE_URL}/rest/v1/app_state`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=minimal'
+    },
+    body: JSON.stringify([{ id, data, updated_at: new Date().toISOString() }])
+  });
+  if(!res.ok) throw new Error(`Supabase UPSERT ${res.status}`);
+}
+
+async function storageGet(key){
+  if(!SUPABASE_CONFIGURED) return null;
+  try{
+    const data = await supabaseGetRow(key);
+    return data ? JSON.stringify(data) : null;
+  }catch(e){
+    console.error('Erreur Supabase (lecture)', e);
+    return null;
+  }
+}
+
+async function storageSet(key, value){
+  if(!SUPABASE_CONFIGURED){
+    showToast("Supabase n'est pas configuré (voir SUPABASE_URL / SUPABASE_ANON_KEY dans le code).");
+    return false;
+  }
+  try{
+    await supabaseUpsertRow(key, JSON.parse(value));
+    return true;
+  }catch(e){
+    console.error('Erreur Supabase (écriture)', e);
+    return false;
+  }
+}
+
+/* ===================== Data & storage ===================== */
+const DEFAULT_AGENTS = [{"nom": "ACHFIE", "prenom": "Siham", "code": "ACSI", "numero": 51, "source": "match"}, {"nom": "ADAM", "prenom": "Jacqueline", "code": "ADJA", "numero": 1001, "source": "match"}, {"nom": "AEK", "prenom": "Infis", "code": "AEIN", "numero": 151, "source": "added_from_feuil2"}, {"nom": "Al CABIR", "prenom": "Assiya", "code": "ALAS", "numero": 51, "source": "match"}, {"nom": "ASD", "prenom": "ASD", "code": "ASAS", "numero": 7001, "source": "added_from_feuil2"}, {"nom": "BAMBA", "prenom": "Kamidja", "code": "BAKA", "numero": 201, "source": "added_from_feuil2"}, {"nom": "BAMBA", "prenom": "Karidja", "code": "BAKA", "numero": 1, "source": "only_in_sheet1"}, {"nom": "BARCAROLLE", "prenom": "Résidence", "code": "BARE", "numero": 901, "source": "added_from_feuil2"}, {"nom": "BARCAROLLE", "prenom": "PRELEVEMENT", "code": "BAPR", "numero": 901, "source": "added_from_feuil2"}, {"nom": "BENAMANE", "prenom": "Mélissa", "code": "BEME", "numero": 51, "source": "match"}, {"nom": "BLANCHY", "prenom": "Julie", "code": "BLJU", "numero": 131, "source": "match"}, {"nom": "BOLAND", "prenom": "Nathalie", "code": "BONA", "numero": 121, "source": "match"}, {"nom": "BREDA", "prenom": "Frédérique", "code": "BRFR", "numero": 201, "source": "match"}, {"nom": "BUJELA", "prenom": "Michaël", "code": "BUMI", "numero": 151, "source": "match"}, {"nom": "CARO", "prenom": "Aurélie", "code": "CAAU", "numero": 51, "source": "match"}, {"nom": "CAUCHETEUX", "prenom": "Nabi", "code": "CANA", "numero": 1, "source": "added_from_feuil2"}, {"nom": "CAUCHETEUX", "prenom": "Nabindu", "code": "CANA", "numero": 1, "source": "only_in_sheet1"}, {"nom": "CENTRE DE", "prenom": "Tiège", "code": "CETI", "numero": 1651, "source": "added_from_feuil2"}, {"nom": "CHALSECHE", "prenom": "Viviane", "code": "CHVI", "numero": 701, "source": "match"}, {"nom": "CLAUS", "prenom": "SANDRINE", "code": "CLSA", "numero": 351, "source": "match"}, {"nom": "CLOTH", "prenom": "Sylvie", "code": "CLSY", "numero": 401, "source": "match"}, {"nom": "COLLETTE", "prenom": "Aurore", "code": "COAU", "numero": 342, "source": "match"}, {"nom": "COLSON", "prenom": "Michel", "code": "COMI", "numero": 36, "source": "match"}, {"nom": "COMPERE", "prenom": "Pierre", "code": "COPI", "numero": 1952, "source": "match"}, {"nom": "CORREA", "prenom": "Cécile", "code": "COCE", "numero": 101, "source": "added_from_feuil2"}, {"nom": "CORREA de Brito", "prenom": "Cécile", "code": "COCE", "numero": 1, "source": "only_in_sheet1"}, {"nom": "COUMONT", "prenom": "Anaïs", "code": "COAN", "numero": 201, "source": "match"}, {"nom": "CRESCEND'EAU", "prenom": "Poly", "code": "CRPO", "numero": 10151, "source": "added_from_feuil2"}, {"nom": "DANIELE", "prenom": "Emanuela", "code": "DAEM", "numero": 51, "source": "match"}, {"nom": "DAVID", "prenom": "Pascale", "code": "DAPA", "numero": 51, "source": "match"}, {"nom": "de Vresse", "prenom": "Kévin", "code": "DEKE", "numero": 51, "source": "match"}, {"nom": "DEROUAU", "prenom": "Maud", "code": "DEMA", "numero": 51, "source": "match"}, {"nom": "EL JOUHRI", "prenom": "Sanae", "code": "ELSA", "numero": 101, "source": "match"}, {"nom": "ENGLEBERT", "prenom": "Annick", "code": "ENAN", "numero": 51, "source": "match"}, {"nom": "ESPACE", "prenom": "Meyerbeer", "code": "ESME", "numero": 2601, "source": "added_from_feuil2"}, {"nom": "FIL de", "prenom": "Hoëgne", "code": "FIHO", "numero": 201, "source": "added_from_feuil2"}, {"nom": "FRANCESCHI", "prenom": "Tiffany", "code": "FRTI", "numero": 121, "source": "match"}, {"nom": "FREBEL", "prenom": "Laurélie", "code": "FRLA", "numero": 51, "source": "match"}, {"nom": "GERON", "prenom": "Brigitte", "code": "GEBR", "numero": 4950, "source": "match"}, {"nom": "GIROUT", "prenom": "Claire", "code": "GICL", "numero": 1, "source": "only_in_sheet1"}, {"nom": "HAMDINI", "prenom": "Wasila", "code": "HAWA", "numero": 251, "source": "match"}, {"nom": "HENSEN", "prenom": "Charline", "code": "HECH", "numero": 51, "source": "match"}, {"nom": "HERBILLON", "prenom": "Catherine", "code": "HECA", "numero": 181, "source": "match"}, {"nom": "HERMAN", "prenom": "Vanessa", "code": "HEVA", "numero": 251, "source": "match"}, {"nom": "HEUDT", "prenom": "Sabine", "code": "HESA", "numero": 51, "source": "match"}, {"nom": "HEURE", "prenom": "Claire", "code": "HECL", "numero": 2252, "source": "added_from_feuil2"}, {"nom": "HOGGE", "prenom": "Gaetan", "code": "HOGA", "numero": 51, "source": "added_from_feuil2"}, {"nom": "HUBIN", "prenom": "Eugénie", "code": "HUEU", "numero": 651, "source": "match"}, {"nom": "IDRISSI", "prenom": "Hanan", "code": "IDHA", "numero": 56, "source": "match"}, {"nom": "JACQUES", "prenom": "Géraldine", "code": "JAGE", "numero": 101, "source": "match"}, {"nom": "JAMAR", "prenom": "Anne-Catherine", "code": "JAAN", "numero": 101, "source": "match"}, {"nom": "KAISER", "prenom": "Sabine", "code": "KASA", "numero": 101, "source": "added_from_feuil2"}, {"nom": "KALIMU", "prenom": "Naomi", "code": "KANA", "numero": 51, "source": "match"}, {"nom": "Kyoze Amin", "prenom": "EDDY", "code": "KYED", "numero": 51, "source": "added_from_feuil2"}, {"nom": "KYOZE AMINE", "prenom": "Eddy", "code": "KYED", "numero": 1, "source": "only_in_sheet1"}, {"nom": "LA", "prenom": "Kan", "code": "LAKA", "numero": 3251, "source": "added_from_feuil2"}, {"nom": "LA LAINIERE", "prenom": "MR", "code": "LAMR", "numero": 451, "source": "added_from_feuil2"}, {"nom": "LAMOTTE", "prenom": "Isabelle", "code": "LAIS", "numero": 301, "source": "match"}, {"nom": "LARBALESTRIER", "prenom": "Valérie", "code": "LAVA", "numero": 1341, "source": "match"}, {"nom": "LAURENT", "prenom": "Stéphanie", "code": "LAST", "numero": 51, "source": "match"}, {"nom": "Le Couquemont", "prenom": "MRS", "code": "LEMR", "numero": 51, "source": "added_from_feuil2"}, {"nom": "LEJEUNE", "prenom": "Isabelle", "code": "LEIS", "numero": 151, "source": "added_from_feuil2"}, {"nom": "LENDERS", "prenom": "evelyne", "code": "LEEV", "numero": 51, "source": "added_from_feuil2"}, {"nom": "LENNERTS", "prenom": "Angéline", "code": "LEAN", "numero": 51, "source": "match"}, {"nom": "LENOIR", "prenom": "Tiffany", "code": "LETI", "numero": 601, "source": "match"}, {"nom": "LESUISSE", "prenom": "Sébastien", "code": "LESE", "numero": 51, "source": "match"}, {"nom": "LIEGEOIS", "prenom": "Cindy", "code": "LICI", "numero": 201, "source": "match"}, {"nom": "LÉON", "prenom": "Andrimont", "code": "LEAN", "numero": 51, "source": "added_from_feuil2"}, {"nom": "MASSART", "prenom": "Julie", "code": "MAJU", "numero": 501, "source": "match"}, {"nom": "MAUHIN", "prenom": "MARJORIE", "code": "MAMA", "numero": 201, "source": "match"}, {"nom": "MAUXHIN", "prenom": "Isabelle", "code": "MAIS", "numero": 1, "source": "only_in_sheet1"}, {"nom": "MEULDERS", "prenom": "Muriel", "code": "MEMU", "numero": 201, "source": "match"}, {"nom": "MEYER", "prenom": "Céline", "code": "MECE", "numero": 51, "source": "match"}, {"nom": "MOREAU", "prenom": "Sabine", "code": "MOSA", "numero": 421, "source": "match"}, {"nom": "NISOL", "prenom": "Floriane", "code": "NIFL", "numero": 1, "source": "only_in_sheet1"}, {"nom": "NOEL", "prenom": "Cédric", "code": "NOCE", "numero": 51, "source": "match"}, {"nom": "Nyssen", "prenom": "Tiphaine", "code": "NYTI", "numero": 51, "source": "match"}, {"nom": "OLIVIER", "prenom": "Valérie", "code": "OLVA", "numero": 51, "source": "match"}, {"nom": "PAES", "prenom": "Loulou", "code": "PALO", "numero": 3450, "source": "added_from_feuil2"}, {"nom": "PAES", "prenom": "Marie-Louise (LOULOU)", "code": "PAMA", "numero": 1, "source": "only_in_sheet1"}, {"nom": "PAUQUAY", "prenom": "Florence", "code": "PAFL", "numero": 51, "source": "match"}, {"nom": "RAMDANI", "prenom": "Souad", "code": "RASO", "numero": 21, "source": "match"}, {"nom": "RAMDANI", "prenom": "Naziha", "code": "RANA", "numero": 51, "source": "match"}, {"nom": "REHEUL", "prenom": "Marie", "code": "REMA", "numero": 51, "source": "match"}, {"nom": "RIGGI", "prenom": "Laura", "code": "RILA", "numero": 131, "source": "match"}, {"nom": "ROBINET", "prenom": "Christine", "code": "ROCH", "numero": 51, "source": "match"}, {"nom": "RODERBOURG", "prenom": "Manuela", "code": "ROMA", "numero": 157, "source": "match"}, {"nom": "SAINT", "prenom": "Joseph", "code": "SAJO", "numero": 1702, "source": "added_from_feuil2"}, {"nom": "SHAMS", "prenom": "Dison", "code": "SHDI", "numero": 101, "source": "added_from_feuil2"}, {"nom": "SOLIE", "prenom": "Stéphanie", "code": "SOST", "numero": 51, "source": "added_from_feuil2"}, {"nom": "SOLLIE", "prenom": "Stéphanie", "code": "SOST", "numero": 1, "source": "only_in_sheet1"}, {"nom": "SOMJA", "prenom": "Marie-Pierre", "code": "SOMA", "numero": 1081, "source": "match"}, {"nom": "TILIA", "prenom": "Plvmt", "code": "TIPL", "numero": 1152, "source": "added_from_feuil2"}, {"nom": "TORUN", "prenom": "Mervé", "code": "TOME", "numero": 51, "source": "match"}, {"nom": "TRILLET", "prenom": "Charlotte", "code": "TRCH", "numero": 51, "source": "match"}, {"nom": "VANDEBERG", "prenom": "Aurore", "code": "VAAU", "numero": 51, "source": "match"}, {"nom": "VILLE", "prenom": "Agnes", "code": "VIAG", "numero": 51, "source": "match"}, {"nom": "VPHARMA", "prenom": "HERVE", "code": "VPHE", "numero": 101, "source": "added_from_feuil2"}, {"nom": "VPHARMA", "prenom": "WELKEN", "code": "VPWE", "numero": 351, "source": "added_from_feuil2"}, {"nom": "WAHABI", "prenom": "Siham", "code": "WASI", "numero": 301, "source": "match"}, {"nom": "WAHABI", "prenom": "Asma", "code": "WAAS", "numero": 81, "source": "added_from_feuil2"}, {"nom": "WAHABI", "prenom": "Asmaa", "code": "WAAS", "numero": 1, "source": "only_in_sheet1"}, {"nom": "Wergifosse", "prenom": "Sophie", "code": "WESO", "numero": 21, "source": "match"}];
+
+let agents = [];
+let selectedId = null;
+let addFormOpen = false;
+let editingId = null;
+
+function genId(){ return 'a_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+async function loadAgents(){
+  if(!SUPABASE_CONFIGURED){
+    agents = DEFAULT_AGENTS.map(a => ({ ...a, id: genId() }));
+    return;
+  }
+  try{
+    const raw = await storageGet('agents');
+    if(raw){
+      agents = JSON.parse(raw);
+      return;
+    }
+  }catch(e){ /* not found yet */ }
+  agents = DEFAULT_AGENTS.map(a => ({ ...a, id: genId() }));
+  await saveAgents();
+}
+
+async function saveAgents(){
+  const ok = await storageSet('agents', JSON.stringify(agents));
+  if(!ok && SUPABASE_CONFIGURED){
+    showToast("Erreur d'enregistrement — vérifiez la connexion. Vos modifications ne sont pas sauvegardées.");
+  }
+}
+
+/* ===================== Helpers ===================== */
+function normalize(s){
+  return (s||'').toString().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+}
+function padNum(n){ return String(n).padStart(5,'0'); }
+function fullCode(a){ return a.code + padNum(a.numero); }
+
+function codeCounts(){
+  const m = {};
+  agents.forEach(a => { m[a.code] = (m[a.code]||0) + 1; });
+  return m;
+}
+
+function findAgentByCode(code, excludeId){
+  return agents.find(a => a.code === code && a.id !== excludeId);
+}
+
+function suggestCode(nom, prenom){
+  const n = normalize(nom).replace(/[^A-Z]/g,'');
+  const p = normalize(prenom).replace(/[^A-Z]/g,'');
+  return ((n+'XX').slice(0,2) + (p+'XX').slice(0,2));
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._tm);
+  showToast._tm = setTimeout(()=> t.classList.remove('show'), 2600);
+}
+
+function showConfirmModal(message, onConfirm){
+  const overlay = document.getElementById('modalOverlay');
+  document.getElementById('modalMessage').textContent = message;
+  overlay.classList.add('show');
+
+  const confirmBtn = document.getElementById('modalConfirmBtn');
+  const cancelBtn = document.getElementById('modalCancelBtn');
+
+  const cleanup = () => {
+    overlay.classList.remove('show');
+    confirmBtn.removeEventListener('click', onConfirmClick);
+    cancelBtn.removeEventListener('click', onCancelClick);
+  };
+  const onConfirmClick = () => { cleanup(); onConfirm(); };
+  const onCancelClick = () => { cleanup(); };
+
+  confirmBtn.addEventListener('click', onConfirmClick);
+  cancelBtn.addEventListener('click', onCancelClick);
+}
+
+/* ===================== Rendering: sidebar ===================== */
+function renderSidebar(){
+  const list = document.getElementById('agent-list');
+  const q = normalize(document.getElementById('searchInput').value.trim());
+  const counts = codeCounts();
+
+  const sorted = [...agents].sort((a,b) => (a.nom||'').localeCompare(b.nom||'', 'fr'));
+  const filtered = q ? sorted.filter(a =>
+    normalize(a.nom).includes(q) || normalize(a.prenom).includes(q) || normalize(a.code).includes(q)
+  ) : sorted;
+
+  if(filtered.length === 0){
+    list.innerHTML = `<div class="empty-note">Aucun agent ne correspond à la recherche.</div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(a => {
+    const dup = counts[a.code] > 1;
+    return `
+      <button class="agent-row ${a.id===selectedId?'active':''}" data-id="${a.id}">
+        <span>
+          <span class="agent-name">${dup?'<span class="dup-flag" title="Code en double">⚠</span>':''}${escapeHtml(a.nom)} ${escapeHtml(a.prenom)}</span>
+          <div class="agent-sub">n° ${padNum(a.numero)}</div>
+        </span>
+        <span class="agent-code-badge">${escapeHtml(a.code)}</span>
+      </button>`;
+  }).join('');
+
+  list.querySelectorAll('.agent-row').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedId = btn.getAttribute('data-id');
+      addFormOpen = false;
+      editingId = null;
+      renderAll();
+    });
+  });
+}
+
+function escapeHtml(s){
+  return (s==null?'':String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ===================== Rendering: main ===================== */
+function renderMain(){
+  const el = document.getElementById('mainInner');
+
+  if(addFormOpen){
+    el.innerHTML = addFormTemplate();
+    wireAddForm();
+    return;
+  }
+
+  const agent = agents.find(a => a.id === selectedId);
+
+  if(!agent){
+    el.innerHTML = `
+      <div class="empty-state">
+        <h2>Choisissez un agent</h2>
+        <p>Sélectionnez un agent dans la liste à gauche pour prévisualiser son étiquette,<br>ou ajoutez-en un nouveau.</p>
+      </div>`;
+    return;
+  }
+
+  const dupCount = codeCounts()[agent.code];
+  el.innerHTML = `
+    ${dupCount>1 ? `<div class="warning-note">⚠ Le code <strong>${escapeHtml(agent.code)}</strong> est utilisé par ${dupCount} agents. Vérifiez qu'il ne s'agit pas d'un doublon (fusion des deux feuilles) et supprimez l'entrée erronée si besoin.</div>` : ''}
+
+    <div class="card">
+      <h2>Fiche agent</h2>
+      ${editingId===agent.id ? editFormTemplate(agent) : viewFieldsTemplate(agent)}
+    </div>
+
+    <div class="card">
+      <h2>Étiquette — aperçu</h2>
+      <div class="preview-row">
+        <div class="single-preview">
+          <svg id="livePreviewSvg"></svg>
+          <div class="code-line">${escapeHtml(fullCode(agent))}</div>
+          <div class="name-line">${escapeHtml(agent.nom)} ${escapeHtml(agent.prenom)}</div>
+        </div>
+        <div>
+          <div class="counter-line">
+            <span class="big-num">${padNum(agent.numero)}</span>
+            <span class="hint">prochain numéro à imprimer</span>
+          </div>
+          <p style="font-size:12.5px;color:var(--ink-soft);max-width:320px;margin-top:10px;">
+            Le code-barres n'encode que les 4 lettres (<strong>${escapeHtml(agent.code)}</strong>).
+            Le numéro s'incrémente automatiquement après chaque impression de planche.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Planches d'impression</h2>
+      <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-6px;">
+        Chaque planche fait 50 × 60&nbsp;mm (2 colonnes × 5 rangées, 10 étiquettes identiques). D'une planche à l'autre, seul le numéro augmente
+        — de <strong>${padNum(agent.numero)}</strong> à <strong>${padNum(agent.numero)}</strong> pour 1 planche, jusqu'à <strong id="lastNumPreview">${padNum(agent.numero)}</strong> pour la quantité choisie.
+      </p>
+
+      <div class="field-grid" style="grid-template-columns:160px 1fr;align-items:end;margin-top:14px;">
+        <div class="field">
+          <label>Nombre de planches</label>
+          <input id="qtyInput" type="number" min="1" max="2000" value="1">
+        </div>
+        <div class="field-actions" style="margin-top:0;">
+          <button class="btn btn-ghost qty-preset" data-qty="1">1</button>
+          <button class="btn btn-ghost qty-preset" data-qty="100">100</button>
+          <button class="btn btn-ghost qty-preset" data-qty="200">200</button>
+          <button class="btn btn-ghost qty-preset" data-qty="300">300</button>
+        </div>
+      </div>
+
+      <div class="sheet-frame" style="margin-top:14px;">
+        <div class="frame-label">Aperçu de la 1<sup>ère</sup> planche — échelle 3×</div>
+        <div class="sheet-preview" id="sheetPreview"></div>
+      </div>
+      <div class="field-actions">
+        <button class="btn btn-teal btn-primary" id="btnPrint">🖨 Imprimer <span id="btnPrintQtyLabel">1 planche</span> (10 étiquettes)</button>
+      </div>
+    </div>
+  `;
+
+  renderLivePreviewBarcode(agent);
+  renderSheetPreview(agent);
+
+  const qtyInput = document.getElementById('qtyInput');
+  const lastNumPreview = document.getElementById('lastNumPreview');
+  const btnPrintQtyLabel = document.getElementById('btnPrintQtyLabel');
+
+  function updateQtyUI(){
+    let qty = parseInt(qtyInput.value, 10);
+    if(isNaN(qty) || qty < 1) qty = 1;
+    lastNumPreview.textContent = padNum(agent.numero + qty - 1);
+    btnPrintQtyLabel.textContent = qty === 1 ? '1 planche' : `${qty} planches`;
+  }
+  qtyInput.addEventListener('input', updateQtyUI);
+  document.querySelectorAll('.qty-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      qtyInput.value = btn.getAttribute('data-qty');
+      updateQtyUI();
+    });
+  });
+  updateQtyUI();
+
+  document.getElementById('btnPrint').addEventListener('click', () => {
+    let qty = parseInt(qtyInput.value, 10);
+    if(isNaN(qty) || qty < 1) qty = 1;
+    const startNum = agent.numero;
+    const endNum = agent.numero + qty - 1;
+    const msg = qty === 1
+      ? `${agent.nom} ${agent.prenom} — 1 planche (10 étiquettes), code ${agent.code}${padNum(startNum)}.`
+      : `${agent.nom} ${agent.prenom} — ${qty} planches (${qty*10} étiquettes), numéros ${agent.code}${padNum(startNum)} à ${agent.code}${padNum(endNum)}.`;
+    showConfirmModal(msg, () => printSheet(agent, qty));
+  });
+}
+
+function viewFieldsTemplate(agent){
+  return `
+    <div class="field-grid cols-4">
+      <div class="field"><label>Nom</label><div style="padding:9px 0;font-size:14px;">${escapeHtml(agent.nom)}</div></div>
+      <div class="field"><label>Prénom</label><div style="padding:9px 0;font-size:14px;">${escapeHtml(agent.prenom)}</div></div>
+      <div class="field"><label>Code</label><div style="padding:9px 0;font-family:'IBM Plex Mono',monospace;font-weight:700;">${escapeHtml(agent.code)}</div></div>
+      <div class="field"><label>Numéro actuel</label><div style="padding:9px 0;font-family:'IBM Plex Mono',monospace;font-weight:700;">${padNum(agent.numero)}</div></div>
+    </div>
+    <div class="field-actions">
+      <button class="btn btn-ghost" id="btnEdit">Modifier</button>
+      <button class="btn btn-danger" id="btnDelete">Supprimer</button>
+    </div>
+  `;
+}
+
+function editFormTemplate(agent){
+  return `
+    <div class="field-grid cols-4">
+      <div class="field"><label>Nom</label><input id="f-nom" value="${escapeHtml(agent.nom)}"></div>
+      <div class="field"><label>Prénom</label><input id="f-prenom" value="${escapeHtml(agent.prenom)}"></div>
+      <div class="field"><label>Code (4 lettres)</label><input id="f-code" class="mono" maxlength="4" value="${escapeHtml(agent.code)}"></div>
+      <div class="field"><label>Numéro</label><input id="f-numero" type="number" min="0" value="${agent.numero}"></div>
+    </div>
+    <div class="field-actions">
+      <button class="btn btn-primary" id="btnSave">Enregistrer</button>
+      <button class="btn btn-ghost" id="btnCancel">Annuler</button>
+    </div>
+  `;
+}
+
+function addFormTemplate(){
+  return `
+    <div class="card">
+      <h2>Ajouter un agent</h2>
+      <div class="field-grid cols-4">
+        <div class="field"><label>Nom</label><input id="n-nom" placeholder="COUNET"></div>
+        <div class="field"><label>Prénom</label><input id="n-prenom" placeholder="Jeremy"></div>
+        <div class="field"><label>Code (4 lettres)</label><input id="n-code" class="mono" maxlength="4" placeholder="COJE"></div>
+        <div class="field"><label>Numéro de départ</label><input id="n-numero" type="number" min="0" value="1"></div>
+      </div>
+      <div class="field-actions">
+        <button class="btn btn-primary" id="btnCreate">Ajouter l'agent</button>
+        <button class="btn btn-ghost" id="btnCancelAdd">Annuler</button>
+      </div>
+    </div>
+  `;
+}
+
+function wireAddForm(){
+  const nomEl = document.getElementById('n-nom');
+  const prenomEl = document.getElementById('n-prenom');
+  const codeEl = document.getElementById('n-code');
+  let codeTouched = false;
+  codeEl.addEventListener('input', () => { codeTouched = true; });
+  function autoSuggest(){
+    if(!codeTouched){ codeEl.value = suggestCode(nomEl.value, prenomEl.value); }
+  }
+  nomEl.addEventListener('input', autoSuggest);
+  prenomEl.addEventListener('input', autoSuggest);
+
+  document.getElementById('btnCancelAdd').addEventListener('click', () => {
+    addFormOpen = false; renderAll();
+  });
+
+  document.getElementById('btnCreate').addEventListener('click', async () => {
+    const nom = nomEl.value.trim();
+    const prenom = prenomEl.value.trim();
+    let code = normalize(codeEl.value).replace(/[^A-Z]/g,'');
+    const numero = parseInt(document.getElementById('n-numero').value, 10);
+
+    if(!nom || !prenom){ showToast('Le nom et le prénom sont obligatoires.'); return; }
+    if(!code){ code = suggestCode(nom, prenom); }
+    if(code.length !== 4){ showToast('Le code doit contenir exactement 4 lettres.'); return; }
+    if(isNaN(numero) || numero < 0){ showToast('Le numéro doit être un entier positif.'); return; }
+    const clash = findAgentByCode(code, null);
+    if(clash){ showToast(`Le code ${code} est déjà utilisé par ${clash.nom} ${clash.prenom}. Choisissez un autre code.`); return; }
+
+    const newAgent = { id: genId(), nom, prenom, code, numero, source:'manuel' };
+    agents.push(newAgent);
+    await saveAgents();
+    selectedId = newAgent.id;
+    addFormOpen = false;
+    renderAll();
+    showToast(`Agent ${nom} ${prenom} ajouté.`);
+  });
+}
+
+function wireDetailButtons(agent){
+  const editBtn = document.getElementById('btnEdit');
+  if(editBtn) editBtn.addEventListener('click', () => { editingId = agent.id; renderAll(); });
+
+  const delBtn = document.getElementById('btnDelete');
+  if(delBtn) delBtn.addEventListener('click', () => confirmDelete(agent));
+
+  const saveBtn = document.getElementById('btnSave');
+  if(saveBtn) saveBtn.addEventListener('click', async () => {
+    const nom = document.getElementById('f-nom').value.trim();
+    const prenom = document.getElementById('f-prenom').value.trim();
+    const code = normalize(document.getElementById('f-code').value).replace(/[^A-Z]/g,'');
+    const numero = parseInt(document.getElementById('f-numero').value, 10);
+
+    if(!nom || !prenom){ showToast('Le nom et le prénom sont obligatoires.'); return; }
+    if(code.length !== 4){ showToast('Le code doit contenir exactement 4 lettres.'); return; }
+    if(isNaN(numero) || numero < 0){ showToast('Le numéro doit être un entier positif.'); return; }
+    const clash = findAgentByCode(code, agent.id);
+    if(clash){ showToast(`Le code ${code} est déjà utilisé par ${clash.nom} ${clash.prenom}. Choisissez un autre code.`); return; }
+
+    agent.nom = nom; agent.prenom = prenom; agent.code = code; agent.numero = numero;
+    await saveAgents();
+    editingId = null;
+    renderAll();
+    showToast('Modifications enregistrées.');
+  });
+
+  const cancelBtn = document.getElementById('btnCancel');
+  if(cancelBtn) cancelBtn.addEventListener('click', () => { editingId = null; renderAll(); });
+}
+
+function confirmDelete(agent){
+  const el = document.getElementById('mainInner');
+  const card = el.querySelector('.card');
+  const actionsDiv = document.getElementById('btnDelete').parentElement;
+  actionsDiv.innerHTML = `
+    <span style="font-size:13.5px;color:var(--danger);align-self:center;">Supprimer ${escapeHtml(agent.nom)} ${escapeHtml(agent.prenom)} définitivement ?</span>
+    <button class="btn btn-danger" id="btnConfirmDelete">Oui, supprimer</button>
+    <button class="btn btn-ghost" id="btnCancelDelete">Annuler</button>
+  `;
+  document.getElementById('btnConfirmDelete').addEventListener('click', async () => {
+    agents = agents.filter(a => a.id !== agent.id);
+    selectedId = null;
+    await saveAgents();
+    renderAll();
+    showToast('Agent supprimé.');
+  });
+  document.getElementById('btnCancelDelete').addEventListener('click', () => renderAll());
+}
+
+/* ===================== Barcodes ===================== */
+function barcodeLibReady(){
+  if(typeof JsBarcode === 'undefined'){
+    showToast("La librairie de code-barres n'a pas pu se charger (connexion réseau). Rechargez la page.");
+    return false;
+  }
+  return true;
+}
+
+function fixSvgViewBox(svg){
+  // JsBarcode sets width/height attributes but no viewBox; without a viewBox,
+  // CSS-driven resizing clips the drawing instead of scaling it. Adding a
+  // viewBox makes the barcode scale correctly and stay visible at any size.
+  const w = parseFloat(svg.getAttribute('width'));
+  const h = parseFloat(svg.getAttribute('height'));
+  if(w && h){
+    svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    svg.removeAttribute('width');
+    svg.removeAttribute('height');
+  }
+}
+
+function renderLivePreviewBarcode(agent){
+  if(!barcodeLibReady()) return;
+  const svg = document.getElementById('livePreviewSvg');
+  try{
+    JsBarcode(svg, agent.code, { format:'CODE128', displayValue:false, margin:4, width:2, height:50 });
+    fixSvgViewBox(svg);
+  }catch(e){ console.error(e); }
+}
+
+function renderSheetPreview(agent){
+  const wrap = document.getElementById('sheetPreview');
+  wrap.innerHTML = '';
+  if(!barcodeLibReady()) return;
+  for(let i=0;i<10;i++){
+    const cell = document.createElement('div');
+    cell.className = 'sheet-cell';
+    const svgNs = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNs,'svg');
+    cell.appendChild(svg);
+    const codeDiv = document.createElement('div');
+    codeDiv.className = 'cell-code';
+    codeDiv.textContent = fullCode(agent);
+    cell.appendChild(codeDiv);
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'cell-name';
+    nameDiv.textContent = agent.nom + ' ' + agent.prenom;
+    cell.appendChild(nameDiv);
+    wrap.appendChild(cell);
+    try{
+      JsBarcode(svg, agent.code, { format:'CODE128', displayValue:false, margin:2, width:1.4, height:34 });
+      fixSvgViewBox(svg);
+    }catch(e){}
+  }
+}
+
+function printSheet(agent, qty){
+  if(!barcodeLibReady()) return;
+  qty = Math.max(1, Math.min(2000, qty || 1));
+  const holder = document.getElementById('printSheet');
+  holder.innerHTML = '';
+  const svgNs = 'http://www.w3.org/2000/svg';
+  const startNum = agent.numero;
+
+  for(let p=0; p<qty; p++){
+    const pageNum = startNum + p;
+    const page = document.createElement('div');
+    page.className = 'sheet-page';
+    for(let i=0;i<10;i++){
+      const cell = document.createElement('div');
+      cell.className = 'p-cell';
+      const svg = document.createElementNS(svgNs,'svg');
+      cell.appendChild(svg);
+      const codeDiv = document.createElement('div');
+      codeDiv.className = 'p-code';
+      codeDiv.textContent = agent.code + padNum(pageNum);
+      cell.appendChild(codeDiv);
+      const nameDiv = document.createElement('div');
+      nameDiv.className = 'p-name';
+      nameDiv.textContent = agent.nom + ' ' + agent.prenom;
+      cell.appendChild(nameDiv);
+      page.appendChild(cell);
+      try{
+        JsBarcode(svg, agent.code, { format:'CODE128', displayValue:false, margin:1, width:1, height:20 });
+        fixSvgViewBox(svg);
+      }catch(e){}
+    }
+    holder.appendChild(page);
+  }
+
+  // window.print() must be called synchronously, in direct response to the
+  // click, or some browsers silently drop the dialog because the "user
+  // gesture" context has expired (this is why an earlier version — which
+  // awaited a setTimeout first — sometimes failed to open the dialog).
+  window.print();
+
+  agent.numero = startNum + qty;
+  saveAgents();
+  renderAll();
+  const lastNum = padNum(agent.numero - 1);
+  showToast(qty === 1
+    ? `Planche envoyée à l'impression. Prochain numéro : ${padNum(agent.numero)}.`
+    : `${qty} planches envoyées à l'impression (du n° ${padNum(startNum)} au n° ${lastNum}). Prochain numéro : ${padNum(agent.numero)}.`);
+}
+
+/* ===================== Boot ===================== */
+function renderAll(){
+  renderSidebar();
+  renderMain();
+  const agent = agents.find(a => a.id === selectedId);
+  if(agent && !addFormOpen && editingId !== agent.id){ wireDetailButtons(agent); }
+}
+
+document.getElementById('searchInput').addEventListener('input', renderSidebar);
+document.getElementById('btnShowAdd').addEventListener('click', () => {
+  addFormOpen = true; selectedId = null; editingId = null; renderAll();
+});
+
+(async function init(){
+  if(!SUPABASE_CONFIGURED){
+    document.getElementById('configWarning').style.display = 'block';
+  }
+  await loadAgents();
+  renderAll();
+})();
+</script>
+</body>
+</html>
