@@ -24,7 +24,8 @@
     --radius:10px;
 
     /* Mise en page de l'étiquette — ajustable via le panneau "Mise en page" */
-    --label-barcode-width: 90%;
+    --label-barcode-width: 100%;
+    --label-barcode-height: 50%;
     --label-code-size: 5.5pt;
     --label-name-size: 4.3pt;
     --label-gap: 0.3mm;
@@ -330,7 +331,7 @@
     overflow:hidden;
     gap:var(--label-gap-preview);
   }
-  .sheet-cell svg{ width:var(--label-barcode-width); height:auto; order:var(--label-order-barcode); }
+  .sheet-cell svg{ width:var(--label-barcode-width); height:var(--label-barcode-height); order:var(--label-order-barcode); }
   .sheet-cell .cell-code{
     font-family:'IBM Plex Mono',monospace;
     font-weight:700;
@@ -456,7 +457,7 @@
     /* shape-rendering:crispEdges aligne les barres du code-barres sur la
        grille de pixels au lieu de les laisser lisser/flouter par
        anti-crénelage — essentiel à cette taille pour rester scannable. */
-    .p-cell svg{ width:var(--label-barcode-width); height:auto; order:var(--label-order-barcode); shape-rendering:crispEdges; }
+    .p-cell svg{ width:var(--label-barcode-width); height:var(--label-barcode-height); order:var(--label-order-barcode); shape-rendering:crispEdges; }
     .p-cell .p-code{
       font-family:'IBM Plex Mono',monospace; font-weight:800; font-size:var(--label-code-size);
       order:var(--label-order-code); color:#000; letter-spacing:0.01em;
@@ -527,7 +528,7 @@ const SUPABASE_URL = SUPABASE_URL_RAW.trim().replace(/\/rest\/v1\/?$/i, '').repl
 const SUPABASE_CONFIGURED = !SUPABASE_URL_RAW.includes('YOUR-PROJECT') && !SUPABASE_ANON_KEY.includes('YOUR-ANON');
 
 /* Format du code-barres et valeur encodée (les 4 lettres du code, sans préfixe). */
-const BARCODE_FORMAT = "CODE128";
+const BARCODE_FORMAT = "CODE39";
 
 async function supabaseGetRow(id){
   const url = `${SUPABASE_URL}/rest/v1/app_state?id=eq.${encodeURIComponent(id)}&select=data`;
@@ -593,7 +594,8 @@ let layoutPanelOpen = false;
 /* ===================== Mise en page de l'étiquette (partagée) ===================== */
 const DEFAULT_LAYOUT = {
   order: ['barcode', 'code', 'name'],
-  barcodeWidthPercent: 90,
+  barcodeWidthPercent: 100,
+  barcodeHeightPercent: 50,
   codeFontPt: 5.5,
   nameFontPt: 4.3,
   gapMm: 0.3,
@@ -624,6 +626,7 @@ async function saveLayoutConfig(){
 function applyLayoutCSS(){
   const root = document.documentElement.style;
   root.setProperty('--label-barcode-width', layoutConfig.barcodeWidthPercent + '%');
+  root.setProperty('--label-barcode-height', layoutConfig.barcodeHeightPercent + '%');
   root.setProperty('--label-code-size', layoutConfig.codeFontPt + 'pt');
   root.setProperty('--label-name-size', layoutConfig.nameFontPt + 'pt');
   root.setProperty('--label-gap', layoutConfig.gapMm + 'mm');
@@ -919,8 +922,12 @@ function layoutPanelTemplate(){
 
       <div class="field-grid" style="margin-top:20px;">
         <div class="field">
-          <label>Taille du code-barres (<span id="ly-barcode-val">${layoutConfig.barcodeWidthPercent}</span>%)</label>
-          <input class="layout-slider" type="range" id="ly-barcode" min="50" max="98" step="1" value="${layoutConfig.barcodeWidthPercent}">
+          <label>Largeur du code-barres (<span id="ly-barcode-val">${layoutConfig.barcodeWidthPercent}</span>%)</label>
+          <input class="layout-slider" type="range" id="ly-barcode" min="50" max="100" step="1" value="${layoutConfig.barcodeWidthPercent}">
+        </div>
+        <div class="field">
+          <label>Hauteur du code-barres (<span id="ly-barcode-h-val">${layoutConfig.barcodeHeightPercent}</span>%)</label>
+          <input class="layout-slider" type="range" id="ly-barcode-h" min="20" max="80" step="1" value="${layoutConfig.barcodeHeightPercent}">
         </div>
         <div class="field">
           <label>Espacement (<span id="ly-gap-val">${layoutConfig.gapMm}</span>mm)</label>
@@ -1060,6 +1067,7 @@ function wireLayoutPanel(){
     });
   };
   bindSlider('ly-barcode', 'ly-barcode-val', 'barcodeWidthPercent', false, renderLayoutPreview);
+  bindSlider('ly-barcode-h', 'ly-barcode-h-val', 'barcodeHeightPercent', false, renderLayoutPreview);
   bindSlider('ly-gap', 'ly-gap-val', 'gapMm', true, renderLayoutPreview);
   bindSlider('ly-code-size', 'ly-code-size-val', 'codeFontPt', true, renderLayoutPreview);
   bindSlider('ly-name-size', 'ly-name-size-val', 'nameFontPt', true, renderLayoutPreview);
@@ -1233,11 +1241,14 @@ function fixSvgViewBox(svg){
   // JsBarcode sets width/height attributes but no viewBox; without a viewBox,
   // CSS-driven resizing clips the drawing instead of scaling it. Adding a
   // viewBox makes the barcode scale correctly and stay visible at any size.
+  // preserveAspectRatio="none" lets width/height be set independently (e.g.
+  // full label width + fixed half height) — a uniform horizontal stretch
+  // doesn't break barcode readability since all bars scale together.
   const w = parseFloat(svg.getAttribute('width'));
   const h = parseFloat(svg.getAttribute('height'));
   if(w && h){
     svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    svg.setAttribute('preserveAspectRatio', 'none');
     svg.removeAttribute('width');
     svg.removeAttribute('height');
   }
