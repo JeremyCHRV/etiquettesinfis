@@ -22,6 +22,18 @@
     --danger:#B23A3A;
     --danger-bg:#F7E9E7;
     --radius:10px;
+
+    /* Mise en page de l'étiquette — ajustable via le panneau "Mise en page" */
+    --label-barcode-width: 90%;
+    --label-code-size: 5.5pt;
+    --label-name-size: 4.3pt;
+    --label-gap: 0.3mm;
+    --label-code-size-preview: 16.5pt;
+    --label-name-size-preview: 12.9pt;
+    --label-gap-preview: 0.9mm;
+    --label-order-barcode: 1;
+    --label-order-code: 2;
+    --label-order-name: 3;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -226,6 +238,21 @@
     margin-bottom:14px;
   }
 
+  .layout-order-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:7px;
+    padding:8px 12px;
+    margin-bottom:6px;
+    font-size:13.5px;
+  }
+  .layout-order-btns{ display:flex; gap:4px; }
+  .btn-sm{ padding:4px 9px; font-size:12px; }
+  .layout-slider{ width:100%; }
+
   .preview-row{
     display:flex;
     gap:26px;
@@ -287,21 +314,23 @@
     justify-content:center;
     padding:2mm;
     overflow:hidden;
-    gap:1mm;
+    gap:var(--label-gap-preview);
   }
-  .sheet-cell svg{ width:88%; height:auto; }
+  .sheet-cell svg{ width:var(--label-barcode-width); height:auto; order:var(--label-order-barcode); }
   .sheet-cell .cell-code{
     font-family:'IBM Plex Mono',monospace;
     font-weight:700;
-    font-size:9pt;
+    font-size:var(--label-code-size-preview);
     letter-spacing:.02em;
+    order:var(--label-order-code);
   }
   .sheet-cell .cell-name{
     font-family:'Inter',sans-serif;
-    font-size:6.5pt;
+    font-size:var(--label-name-size-preview);
     text-transform:uppercase;
     text-align:center;
     color:#333;
+    order:var(--label-order-name);
     line-height:1.1;
   }
 
@@ -388,11 +417,11 @@
     .p-cell{
       border:0.15mm dashed #aaa;
       display:flex; flex-direction:column; align-items:center; justify-content:center;
-      padding:0.4mm; overflow:hidden; gap:0.3mm; box-sizing:border-box;
+      padding:0.4mm; overflow:hidden; gap:var(--label-gap); box-sizing:border-box;
     }
-    .p-cell svg{ width:90%; height:auto; }
-    .p-cell .p-code{ font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:5.5pt; }
-    .p-cell .p-name{ font-family:Inter,sans-serif; font-size:4.3pt; text-transform:uppercase; text-align:center; line-height:1.05; color:#000; }
+    .p-cell svg{ width:var(--label-barcode-width); height:auto; order:var(--label-order-barcode); }
+    .p-cell .p-code{ font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:var(--label-code-size); order:var(--label-order-code); }
+    .p-cell .p-name{ font-family:Inter,sans-serif; font-size:var(--label-name-size); text-transform:uppercase; text-align:center; line-height:1.05; color:#000; order:var(--label-order-name); }
   }
 </style>
 </head>
@@ -413,6 +442,7 @@
     <div id="agent-list"></div>
     <div class="side-foot">
       <button class="btn btn-amber btn-block" id="btnShowAdd">+ Ajouter un agent</button>
+      <button class="btn btn-ghost btn-block" id="btnShowLayout" style="margin-top:8px;">⚙ Mise en page de l'étiquette</button>
     </div>
   </aside>
 
@@ -447,6 +477,10 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // évite un chemin dupliqué du type "/rest/v1/rest/v1/app_state".
 const SUPABASE_URL = SUPABASE_URL_RAW.trim().replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/,'');
 const SUPABASE_CONFIGURED = !SUPABASE_URL_RAW.includes('YOUR-PROJECT') && !SUPABASE_ANON_KEY.includes('YOUR-ANON');
+
+/* Préfixe ajouté devant les 4 lettres du code, à l'intérieur du code-barres
+   lui-même (ex: code "COJE" -> valeur scannée "PL=COJE"). */
+const BARCODE_PREFIX = "PL=";
 
 async function supabaseGetRow(id){
   const url = `${SUPABASE_URL}/rest/v1/app_state?id=eq.${encodeURIComponent(id)}&select=data`;
@@ -507,6 +541,48 @@ let selectedId = null;
 let addFormOpen = false;
 let editingId = null;
 let loadFailed = false;
+let layoutPanelOpen = false;
+
+/* ===================== Mise en page de l'étiquette (partagée) ===================== */
+const DEFAULT_LAYOUT = {
+  order: ['barcode', 'code', 'name'],
+  barcodeWidthPercent: 90,
+  codeFontPt: 5.5,
+  nameFontPt: 4.3,
+  gapMm: 0.3
+};
+let layoutConfig = { ...DEFAULT_LAYOUT, order: [...DEFAULT_LAYOUT.order] };
+
+async function loadLayoutConfig(){
+  if(!SUPABASE_CONFIGURED){ applyLayoutCSS(); return; }
+  try{
+    const data = await supabaseGetRow('label_layout');
+    if(data){ layoutConfig = { ...DEFAULT_LAYOUT, ...data }; }
+  }catch(e){
+    console.error('Erreur chargement mise en page', e);
+  }
+  applyLayoutCSS();
+}
+
+async function saveLayoutConfig(){
+  const ok = await storageSet('label_layout', JSON.stringify(layoutConfig));
+  if(!ok && SUPABASE_CONFIGURED){ showToast("Erreur d'enregistrement de la mise en page."); }
+  return ok;
+}
+
+function applyLayoutCSS(){
+  const root = document.documentElement.style;
+  root.setProperty('--label-barcode-width', layoutConfig.barcodeWidthPercent + '%');
+  root.setProperty('--label-code-size', layoutConfig.codeFontPt + 'pt');
+  root.setProperty('--label-name-size', layoutConfig.nameFontPt + 'pt');
+  root.setProperty('--label-gap', layoutConfig.gapMm + 'mm');
+  root.setProperty('--label-code-size-preview', (layoutConfig.codeFontPt * 3) + 'pt');
+  root.setProperty('--label-name-size-preview', (layoutConfig.nameFontPt * 3) + 'pt');
+  root.setProperty('--label-gap-preview', (layoutConfig.gapMm * 3) + 'mm');
+  root.setProperty('--label-order-barcode', layoutConfig.order.indexOf('barcode') + 1);
+  root.setProperty('--label-order-code', layoutConfig.order.indexOf('code') + 1);
+  root.setProperty('--label-order-name', layoutConfig.order.indexOf('name') + 1);
+}
 
 function genId(){ return 'a_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 
@@ -547,6 +623,7 @@ function normalize(s){
   return (s||'').toString().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
 }
 function padNum(n){ return String(n).padStart(5,'0'); }
+function barcodeValue(a){ return BARCODE_PREFIX + a.code; } // valeur réellement encodée dans le code-barres
 function fullCode(a){ return a.code + padNum(a.numero); }
 
 function codeCounts(){
@@ -626,6 +703,7 @@ function renderSidebar(){
       selectedId = btn.getAttribute('data-id');
       addFormOpen = false;
       editingId = null;
+      layoutPanelOpen = false;
       renderAll();
     });
   });
@@ -638,6 +716,12 @@ function escapeHtml(s){
 /* ===================== Rendering: main ===================== */
 function renderMain(){
   const el = document.getElementById('mainInner');
+
+  if(layoutPanelOpen){
+    el.innerHTML = layoutPanelTemplate();
+    wireLayoutPanel();
+    return;
+  }
 
   if(addFormOpen){
     el.innerHTML = addFormTemplate();
@@ -747,6 +831,132 @@ function renderMain(){
       ? `${agent.nom} ${agent.prenom} — 1 planche (10 étiquettes), code ${agent.code}${padNum(startNum)}.`
       : `${agent.nom} ${agent.prenom} — ${qty} planches (${qty*10} étiquettes), numéros ${agent.code}${padNum(startNum)} à ${agent.code}${padNum(endNum)}.`;
     showConfirmModal(msg, () => printSheet(agent, qty));
+  });
+}
+
+function layoutPanelTemplate(){
+  const labels = { barcode: 'Code-barres', code: 'Texte du code', name: 'Nom de l\'agent' };
+  const itemsHtml = layoutConfig.order.map((key, i) => `
+    <div class="layout-order-row">
+      <span>${i+1}. ${labels[key]}</span>
+      <div class="layout-order-btns">
+        <button class="btn btn-ghost btn-sm" data-move="up" data-key="${key}" ${i===0?'disabled':''}>▲</button>
+        <button class="btn btn-ghost btn-sm" data-move="down" data-key="${key}" ${i===layoutConfig.order.length-1?'disabled':''}>▼</button>
+      </div>
+    </div>`).join('');
+
+  return `
+    <div class="card">
+      <h2>Mise en page de l'étiquette</h2>
+      <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-6px;">
+        Ces réglages sont partagés : ils s'appliquent à toutes les étiquettes, pour tout le monde, une fois enregistrés.
+      </p>
+
+      <div style="margin-top:16px;">
+        <label style="display:block;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);margin-bottom:8px;">Ordre des éléments (de haut en bas)</label>
+        <div id="layoutOrderList">${itemsHtml}</div>
+      </div>
+
+      <div class="field-grid" style="margin-top:20px;">
+        <div class="field">
+          <label>Taille du code-barres (<span id="ly-barcode-val">${layoutConfig.barcodeWidthPercent}</span>%)</label>
+          <input class="layout-slider" type="range" id="ly-barcode" min="50" max="98" step="1" value="${layoutConfig.barcodeWidthPercent}">
+        </div>
+        <div class="field">
+          <label>Espacement (<span id="ly-gap-val">${layoutConfig.gapMm}</span>mm)</label>
+          <input class="layout-slider" type="range" id="ly-gap" min="0" max="1.5" step="0.1" value="${layoutConfig.gapMm}">
+        </div>
+        <div class="field">
+          <label>Taille texte code (<span id="ly-code-size-val">${layoutConfig.codeFontPt}</span>pt)</label>
+          <input class="layout-slider" type="range" id="ly-code-size" min="3" max="9" step="0.5" value="${layoutConfig.codeFontPt}">
+        </div>
+        <div class="field">
+          <label>Taille texte nom (<span id="ly-name-size-val">${layoutConfig.nameFontPt}</span>pt)</label>
+          <input class="layout-slider" type="range" id="ly-name-size" min="3" max="7" step="0.5" value="${layoutConfig.nameFontPt}">
+        </div>
+      </div>
+
+      <div class="sheet-frame" style="margin-top:20px;">
+        <div class="frame-label">Aperçu d'une étiquette — échelle 3×</div>
+        <div style="width:75mm;height:90mm;display:flex;align-items:center;justify-content:center;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08);">
+          <div class="sheet-cell" id="layoutPreviewCell" style="width:75mm;height:90mm;border:0.75pt solid var(--border);"></div>
+        </div>
+      </div>
+
+      <div class="field-actions">
+        <button class="btn btn-primary" id="btnSaveLayout">Enregistrer pour tout le monde</button>
+        <button class="btn btn-ghost" id="btnResetLayout">Réinitialiser</button>
+        <button class="btn btn-ghost" id="btnCloseLayout">Fermer</button>
+      </div>
+    </div>
+  `;
+}
+
+function wireLayoutPanel(){
+  const sampleAgent = agents[0] || { nom:'DUPONT', prenom:'Marie', code:'DUMA', numero:1 };
+
+  function renderLayoutPreview(){
+    const cell = document.getElementById('layoutPreviewCell');
+    if(!cell) return;
+    cell.innerHTML = '';
+    if(!barcodeLibReady()) return;
+    const svgNs = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNs,'svg');
+    cell.appendChild(svg);
+    const codeDiv = document.createElement('div');
+    codeDiv.className = 'cell-code';
+    codeDiv.textContent = fullCode(sampleAgent);
+    cell.appendChild(codeDiv);
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'cell-name';
+    nameDiv.textContent = sampleAgent.nom + ' ' + sampleAgent.prenom;
+    cell.appendChild(nameDiv);
+    try{
+      JsBarcode(svg, barcodeValue(sampleAgent), { format:'CODE128', displayValue:false, margin:2, width:1.4, height:34 });
+      fixSvgViewBox(svg);
+    }catch(e){}
+  }
+  renderLayoutPreview();
+
+  document.querySelectorAll('#layoutOrderList [data-move]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.getAttribute('data-key');
+      const dir = btn.getAttribute('data-move');
+      const idx = layoutConfig.order.indexOf(key);
+      const swapWith = dir === 'up' ? idx - 1 : idx + 1;
+      if(swapWith < 0 || swapWith >= layoutConfig.order.length) return;
+      [layoutConfig.order[idx], layoutConfig.order[swapWith]] = [layoutConfig.order[swapWith], layoutConfig.order[idx]];
+      applyLayoutCSS();
+      renderMain();
+    });
+  });
+
+  const bindSlider = (id, valId, key, isFloat) => {
+    document.getElementById(id).addEventListener('input', (e) => {
+      const v = isFloat ? parseFloat(e.target.value) : parseInt(e.target.value, 10);
+      layoutConfig[key] = v;
+      document.getElementById(valId).textContent = v;
+      applyLayoutCSS();
+      renderLayoutPreview();
+    });
+  };
+  bindSlider('ly-barcode', 'ly-barcode-val', 'barcodeWidthPercent', false);
+  bindSlider('ly-gap', 'ly-gap-val', 'gapMm', true);
+  bindSlider('ly-code-size', 'ly-code-size-val', 'codeFontPt', true);
+  bindSlider('ly-name-size', 'ly-name-size-val', 'nameFontPt', true);
+
+  document.getElementById('btnSaveLayout').addEventListener('click', async () => {
+    const ok = await saveLayoutConfig();
+    if(ok) showToast('Mise en page enregistrée — appliquée pour tout le monde.');
+  });
+  document.getElementById('btnResetLayout').addEventListener('click', () => {
+    layoutConfig = { ...DEFAULT_LAYOUT, order: [...DEFAULT_LAYOUT.order] };
+    applyLayoutCSS();
+    renderMain();
+  });
+  document.getElementById('btnCloseLayout').addEventListener('click', () => {
+    layoutPanelOpen = false;
+    renderAll();
   });
 }
 
@@ -914,7 +1124,7 @@ function renderLivePreviewBarcode(agent){
   if(!barcodeLibReady()) return;
   const svg = document.getElementById('livePreviewSvg');
   try{
-    JsBarcode(svg, agent.code, { format:'CODE128', displayValue:false, margin:4, width:2, height:50 });
+    JsBarcode(svg, barcodeValue(agent), { format:'CODE128', displayValue:false, margin:4, width:2, height:50 });
     fixSvgViewBox(svg);
   }catch(e){ console.error(e); }
 }
@@ -939,7 +1149,7 @@ function renderSheetPreview(agent){
     cell.appendChild(nameDiv);
     wrap.appendChild(cell);
     try{
-      JsBarcode(svg, agent.code, { format:'CODE128', displayValue:false, margin:2, width:1.4, height:34 });
+      JsBarcode(svg, barcodeValue(agent), { format:'CODE128', displayValue:false, margin:2, width:1.4, height:34 });
       fixSvgViewBox(svg);
     }catch(e){}
   }
@@ -972,7 +1182,7 @@ function printSheet(agent, qty){
       cell.appendChild(nameDiv);
       page.appendChild(cell);
       try{
-        JsBarcode(svg, agent.code, { format:'CODE128', displayValue:false, margin:1, width:1, height:20 });
+        JsBarcode(svg, barcodeValue(agent), { format:'CODE128', displayValue:false, margin:1, width:1, height:20 });
         fixSvgViewBox(svg);
       }catch(e){}
     }
@@ -999,12 +1209,15 @@ function renderAll(){
   renderSidebar();
   renderMain();
   const agent = agents.find(a => a.id === selectedId);
-  if(agent && !addFormOpen){ wireDetailButtons(agent); }
+  if(agent && !addFormOpen && !layoutPanelOpen){ wireDetailButtons(agent); }
 }
 
 document.getElementById('searchInput').addEventListener('input', renderSidebar);
 document.getElementById('btnShowAdd').addEventListener('click', () => {
-  addFormOpen = true; selectedId = null; editingId = null; renderAll();
+  addFormOpen = true; selectedId = null; editingId = null; layoutPanelOpen = false; renderAll();
+});
+document.getElementById('btnShowLayout').addEventListener('click', () => {
+  layoutPanelOpen = true; addFormOpen = false; selectedId = null; editingId = null; renderAll();
 });
 
 (async function init(){
@@ -1023,6 +1236,7 @@ document.getElementById('btnShowAdd').addEventListener('click', () => {
     document.getElementById('agent-list').innerHTML = '<div class="empty-note">Chargement impossible.</div>';
     return;
   }
+  await loadLayoutConfig();
   renderAll();
 })();
 </script>
