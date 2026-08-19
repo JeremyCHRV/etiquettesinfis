@@ -447,20 +447,26 @@ const SUPABASE_CONFIGURED = !SUPABASE_URL.includes('YOUR-PROJECT') && !SUPABASE_
 async function supabaseGetRow(id){
   const url = `${SUPABASE_URL}/rest/v1/app_state?id=eq.${encodeURIComponent(id)}&select=data`;
   const res = await fetch(url, {
+    cache: 'no-store',
     headers: {
       apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      'Cache-Control': 'no-cache'
     }
   });
-  if(!res.ok) throw new Error(`Supabase GET ${res.status}`);
+  if(!res.ok){
+    const body = await res.text().catch(()=>'');
+    throw new Error(`Supabase GET ${res.status}: ${body}`);
+  }
   const rows = await res.json();
-  return rows.length ? rows[0].data : null;
+  return rows.length ? rows[0].data : null; // null = row genuinely absent (first run)
 }
 
 async function supabaseUpsertRow(id, data){
-  const url = `${SUPABASE_URL}/rest/v1/app_state`;
+  const url = `${SUPABASE_URL}/rest/v1/app_state?on_conflict=id`;
   const res = await fetch(url, {
     method: 'POST',
+    cache: 'no-store',
     headers: {
       apikey: SUPABASE_ANON_KEY,
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
@@ -469,17 +475,9 @@ async function supabaseUpsertRow(id, data){
     },
     body: JSON.stringify([{ id, data, updated_at: new Date().toISOString() }])
   });
-  if(!res.ok) throw new Error(`Supabase UPSERT ${res.status}`);
-}
-
-async function storageGet(key){
-  if(!SUPABASE_CONFIGURED) return null;
-  try{
-    const data = await supabaseGetRow(key);
-    return data ? JSON.stringify(data) : null;
-  }catch(e){
-    console.error('Erreur Supabase (lecture)', e);
-    return null;
+  if(!res.ok){
+    const body = await res.text().catch(()=>'');
+    throw new Error(`Supabase UPSERT ${res.status}: ${body}`);
   }
 }
 
@@ -504,6 +502,7 @@ let agents = [];
 let selectedId = null;
 let addFormOpen = false;
 let editingId = null;
+let loadFailed = false;
 
 function genId(){ return 'a_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 
@@ -513,14 +512,23 @@ async function loadAgents(){
     return;
   }
   try{
-    const raw = await storageGet('agents');
-    if(raw){
-      agents = JSON.parse(raw);
+    const data = await supabaseGetRow('agents');
+    if(data){
+      // real, existing shared data — use it as-is
+      agents = data;
       return;
     }
-  }catch(e){ /* not found yet */ }
-  agents = DEFAULT_AGENTS.map(a => ({ ...a, id: genId() }));
-  await saveAgents();
+    // request succeeded but the row genuinely doesn't exist yet: first run ever
+    agents = DEFAULT_AGENTS.map(a => ({ ...a, id: genId() }));
+    await saveAgents();
+  }catch(e){
+    // network/RLS/config error: do NOT reseed or overwrite the shared data.
+    // Show the real dataset read-only-ish (local only) and warn clearly.
+    console.error('Erreur chargement Supabase', e);
+    agents = [];
+    loadFailed = true;
+    showToast("Impossible de charger les données partagées (connexion). Rechargez la page — rien n'a été modifié côté serveur.");
+  }
 }
 
 async function saveAgents(){
@@ -1000,6 +1008,17 @@ document.getElementById('btnShowAdd').addEventListener('click', () => {
     document.getElementById('configWarning').style.display = 'block';
   }
   await loadAgents();
+  if(loadFailed){
+    document.getElementById('mainInner').innerHTML = `
+      <div class="empty-state">
+        <h2>Connexion impossible</h2>
+        <p>Les données partagées n'ont pas pu être chargées depuis Supabase.<br>
+        Vérifiez votre connexion et rechargez la page.<br>
+        <strong>Aucune donnée n'a été modifiée côté serveur.</strong></p>
+      </div>`;
+    document.getElementById('agent-list').innerHTML = '<div class="empty-note">Chargement impossible.</div>';
+    return;
+  }
   renderAll();
 })();
 </script>
