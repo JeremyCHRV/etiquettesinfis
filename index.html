@@ -328,12 +328,12 @@
   }
   .sheet-cell .cell-qr-wrap{
     position:absolute; top:2mm; right:2mm;
-    width:var(--qr-size); aspect-ratio:1/1;
+    /* largeur/hauteur fixées en JS (en mm, inline) pour un dimensionnement fiable */
   }
   .sheet-cell .cell-qr-wrap canvas{ width:100%; height:100%; display:block; }
   .sheet-cell .cell-textblock{
     position:absolute; left:2mm; top:2mm; bottom:2mm;
-    width:calc(100% - var(--qr-size) - 4mm - 1mm);
+    /* largeur fixée en JS (en mm, inline) */
     display:flex;
     flex-direction:column;
     justify-content:center;
@@ -468,12 +468,12 @@
        pour rester scannable. */
     .p-cell .p-qr-wrap{
       position:absolute; top:0.4mm; right:0.4mm;
-      width:var(--qr-size); aspect-ratio:1/1;
+      /* largeur/hauteur fixées en JS (en mm, inline) pour un dimensionnement fiable */
     }
     .p-cell .p-qr-wrap canvas{ width:100%; height:100%; display:block; image-rendering:pixelated; }
     .p-cell .p-textblock{
       position:absolute; left:0.4mm; top:0.4mm; bottom:0.4mm;
-      width:calc(100% - var(--qr-size) - 0.8mm - 0.3mm);
+      /* largeur fixée en JS (en mm, inline) */
       display:flex; flex-direction:column; justify-content:center; align-items:flex-start;
       gap:var(--label-gap); overflow:hidden; box-sizing:border-box;
     }
@@ -1231,12 +1231,21 @@ function createLabelCell(cellClass, codeText, nameText){
 
   const qrWrap = document.createElement('div');
   qrWrap.className = isPrint ? 'p-qr-wrap' : 'cell-qr-wrap';
+  // Taille fixée explicitement en mm (plutôt que % + aspect-ratio, qui peut
+  // mal se comporter sur un élément positionné en absolu selon le moteur
+  // d'impression) — garantit que le QR tient toujours dans l'étiquette.
+  // Cellule imprimée : 25×12mm nominal. Aperçu écran : échelle 3× (75×36mm).
+  const cellWidthMm = isPrint ? 25 : 75;
+  const qrSizeMm = cellWidthMm * (layoutConfig.qrSizePercent / 100);
+  qrWrap.style.width = qrSizeMm + 'mm';
+  qrWrap.style.height = qrSizeMm + 'mm';
   const canvas = document.createElement('canvas');
   qrWrap.appendChild(canvas);
   cell.appendChild(qrWrap);
 
   const textBlock = document.createElement('div');
   textBlock.className = isPrint ? 'p-textblock' : 'cell-textblock';
+  textBlock.style.width = `calc(100% - ${qrSizeMm}mm - ${isPrint ? '0.7mm' : '3mm'})`;
   const codeDiv = document.createElement('div');
   codeDiv.className = `${prefix}-code`;
   codeDiv.textContent = codeText;
