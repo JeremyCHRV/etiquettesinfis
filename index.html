@@ -7,7 +7,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%232F6F62'/%3E%3Ctext x='50' y='68' font-size='54' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='700'%3EIG%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.12.3/JsBarcode.all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.4.4/qrcode.js"></script>
 <style>
   :root{
     --bg:#EEF2ED;
@@ -24,17 +24,15 @@
     --radius:10px;
 
     /* Mise en page de l'étiquette — ajustable via le panneau "Mise en page" */
-    --label-barcode-width: 100%;
-    --label-barcode-height: 50%;
+    --qr-size: 33%; /* QR code : coin haut-droite, carré, % de la largeur de l'étiquette */
     --label-code-size: 5.5pt;
     --label-name-size: 4.3pt;
     --label-gap: 0.3mm;
     --label-code-size-preview: 16.5pt;
     --label-name-size-preview: 12.9pt;
     --label-gap-preview: 0.9mm;
-    --label-order-barcode: 1;
-    --label-order-code: 2;
-    --label-order-name: 3;
+    --label-order-code: 1;
+    --label-order-name: 2;
 
     /* Alignement de la grille de la planche (compense un décentrage réel à l'impression) */
     --sheet-offset-x: 0mm;
@@ -281,7 +279,7 @@
     gap:8px;
     min-width:220px;
   }
-  .single-preview svg{ width:190px; height:auto; }
+  .single-preview canvas{ width:150px; height:150px; }
   .single-preview .code-line{
     font-family:'IBM Plex Mono',monospace;
     font-weight:700;
@@ -322,16 +320,27 @@
     box-shadow:0 1px 3px rgba(0,0,0,.08);
   }
   .sheet-cell{
+    position:relative;
     border:0.75pt dashed #B9C2B4;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
     padding:2mm;
     overflow:hidden;
-    gap:var(--label-gap-preview);
+    box-sizing:border-box;
   }
-  .sheet-cell svg{ width:var(--label-barcode-width); height:var(--label-barcode-height); order:var(--label-order-barcode); }
+  .sheet-cell .cell-qr-wrap{
+    position:absolute; top:2mm; right:2mm;
+    width:var(--qr-size); aspect-ratio:1/1;
+  }
+  .sheet-cell .cell-qr-wrap canvas{ width:100%; height:100%; display:block; }
+  .sheet-cell .cell-textblock{
+    position:absolute; left:2mm; top:2mm; bottom:2mm;
+    width:calc(100% - var(--qr-size) - 4mm - 1mm);
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:flex-start;
+    gap:var(--label-gap-preview);
+    overflow:hidden;
+  }
   .sheet-cell .cell-code{
     font-family:'IBM Plex Mono',monospace;
     font-weight:700;
@@ -343,7 +352,7 @@
     font-family:'Inter',sans-serif;
     font-size:var(--label-name-size-preview);
     text-transform:uppercase;
-    text-align:center;
+    text-align:left;
     color:#333;
     order:var(--label-order-name);
     line-height:1.1;
@@ -450,14 +459,24 @@
     @page{ size:50mm 60mm; margin:0; }
     html,body{ margin:0; padding:0; }
     .p-cell{
+      position:relative;
       border:0.15mm dashed #aaa;
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      padding:0.4mm; overflow:hidden; gap:var(--label-gap); box-sizing:border-box;
+      padding:0.4mm; overflow:hidden; box-sizing:border-box;
     }
-    /* shape-rendering:crispEdges aligne les barres du code-barres sur la
-       grille de pixels au lieu de les laisser lisser/flouter par
-       anti-crénelage — essentiel à cette taille pour rester scannable. */
-    .p-cell svg{ width:var(--label-barcode-width); height:var(--label-barcode-height); order:var(--label-order-barcode); shape-rendering:crispEdges; }
+    /* image-rendering:pixelated garde la grille du QR nette au lieu de la
+       laisser lisser/flouter par interpolation — essentiel à cette taille
+       pour rester scannable. */
+    .p-cell .p-qr-wrap{
+      position:absolute; top:0.4mm; right:0.4mm;
+      width:var(--qr-size); aspect-ratio:1/1;
+    }
+    .p-cell .p-qr-wrap canvas{ width:100%; height:100%; display:block; image-rendering:pixelated; }
+    .p-cell .p-textblock{
+      position:absolute; left:0.4mm; top:0.4mm; bottom:0.4mm;
+      width:calc(100% - var(--qr-size) - 0.8mm - 0.3mm);
+      display:flex; flex-direction:column; justify-content:center; align-items:flex-start;
+      gap:var(--label-gap); overflow:hidden; box-sizing:border-box;
+    }
     .p-cell .p-code{
       font-family:'IBM Plex Mono',monospace; font-weight:800; font-size:var(--label-code-size);
       order:var(--label-order-code); color:#000; letter-spacing:0.01em;
@@ -465,7 +484,7 @@
     }
     .p-cell .p-name{
       font-family:Inter,sans-serif; font-weight:700; font-size:var(--label-name-size);
-      text-transform:uppercase; text-align:center; line-height:1.05; color:#000; order:var(--label-order-name);
+      text-transform:uppercase; text-align:left; line-height:1.05; color:#000; order:var(--label-order-name);
       text-rendering:optimizeLegibility; -webkit-font-smoothing:antialiased;
     }
     /* Espacement additionnel ciblé : rangée 3 (items 5-6) = gap rangées 2-3 ; rangée 4 (items 7-8) = gap rangées 3-4 */
@@ -528,7 +547,7 @@ const SUPABASE_URL = SUPABASE_URL_RAW.trim().replace(/\/rest\/v1\/?$/i, '').repl
 const SUPABASE_CONFIGURED = !SUPABASE_URL_RAW.includes('YOUR-PROJECT') && !SUPABASE_ANON_KEY.includes('YOUR-ANON');
 
 /* Format du code-barres et valeur encodée (les 4 lettres du code, sans préfixe). */
-const BARCODE_FORMAT = "CODE39";
+
 
 async function supabaseGetRow(id){
   const url = `${SUPABASE_URL}/rest/v1/app_state?id=eq.${encodeURIComponent(id)}&select=data`;
@@ -593,9 +612,8 @@ let layoutPanelOpen = false;
 
 /* ===================== Mise en page de l'étiquette (partagée) ===================== */
 const DEFAULT_LAYOUT = {
-  order: ['barcode', 'code', 'name'],
-  barcodeWidthPercent: 100,
-  barcodeHeightPercent: 50,
+  order: ['code', 'name'],
+  qrSizePercent: 33,
   codeFontPt: 5.5,
   nameFontPt: 4.3,
   gapMm: 0.3,
@@ -625,15 +643,13 @@ async function saveLayoutConfig(){
 
 function applyLayoutCSS(){
   const root = document.documentElement.style;
-  root.setProperty('--label-barcode-width', layoutConfig.barcodeWidthPercent + '%');
-  root.setProperty('--label-barcode-height', layoutConfig.barcodeHeightPercent + '%');
+  root.setProperty('--qr-size', layoutConfig.qrSizePercent + '%');
   root.setProperty('--label-code-size', layoutConfig.codeFontPt + 'pt');
   root.setProperty('--label-name-size', layoutConfig.nameFontPt + 'pt');
   root.setProperty('--label-gap', layoutConfig.gapMm + 'mm');
   root.setProperty('--label-code-size-preview', (layoutConfig.codeFontPt * 3) + 'pt');
   root.setProperty('--label-name-size-preview', (layoutConfig.nameFontPt * 3) + 'pt');
   root.setProperty('--label-gap-preview', (layoutConfig.gapMm * 3) + 'mm');
-  root.setProperty('--label-order-barcode', layoutConfig.order.indexOf('barcode') + 1);
   root.setProperty('--label-order-code', layoutConfig.order.indexOf('code') + 1);
   root.setProperty('--label-order-name', layoutConfig.order.indexOf('name') + 1);
 
@@ -686,7 +702,7 @@ function normalize(s){
   return (s||'').toString().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
 }
 function padNum(n){ return String(n).padStart(5,'0'); }
-function barcodeValue(a){ return a.code; } // valeur réellement encodée dans le code-barres (juste les 4 lettres)
+function qrValue(a){ return a.code; } // valeur encodée dans le QR code (juste les 4 lettres)
 function fullCode(a){ return a.code + padNum(a.numero); }
 
 function codeCounts(){
@@ -816,7 +832,7 @@ function renderMain(){
       <h2>Étiquette — aperçu</h2>
       <div class="preview-row">
         <div class="single-preview">
-          <svg id="livePreviewSvg"></svg>
+          <canvas id="livePreviewCanvas" width="150" height="150"></canvas>
           <div class="code-line">${escapeHtml(fullCode(agent))}</div>
           <div class="name-line">${escapeHtml(agent.nom)} ${escapeHtml(agent.prenom)}</div>
         </div>
@@ -863,7 +879,7 @@ function renderMain(){
     </div>
   `;
 
-  renderLivePreviewBarcode(agent);
+  renderLivePreviewQR(agent);
   renderSheetPreview(agent);
 
   const qtyInput = document.getElementById('qtyInput');
@@ -898,7 +914,7 @@ function renderMain(){
 }
 
 function layoutPanelTemplate(){
-  const labels = { barcode: 'Code-barres', code: 'Texte du code', name: 'Nom de l\'agent' };
+  const labels = { code: 'Texte du code', name: 'Nom de l\'agent' };
   const itemsHtml = layoutConfig.order.map((key, i) => `
     <div class="layout-order-row">
       <span>${i+1}. ${labels[key]}</span>
@@ -916,18 +932,14 @@ function layoutPanelTemplate(){
       </p>
 
       <div style="margin-top:16px;">
-        <label style="display:block;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);margin-bottom:8px;">Ordre des éléments (de haut en bas)</label>
+        <label style="display:block;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);margin-bottom:8px;">Ordre du texte (code / nom, de haut en bas)</label>
         <div id="layoutOrderList">${itemsHtml}</div>
       </div>
 
       <div class="field-grid" style="margin-top:20px;">
         <div class="field">
-          <label>Largeur du code-barres (<span id="ly-barcode-val">${layoutConfig.barcodeWidthPercent}</span>%)</label>
-          <input class="layout-slider" type="range" id="ly-barcode" min="50" max="100" step="1" value="${layoutConfig.barcodeWidthPercent}">
-        </div>
-        <div class="field">
-          <label>Hauteur du code-barres (<span id="ly-barcode-h-val">${layoutConfig.barcodeHeightPercent}</span>%)</label>
-          <input class="layout-slider" type="range" id="ly-barcode-h" min="20" max="80" step="1" value="${layoutConfig.barcodeHeightPercent}">
+          <label>Taille du QR code (<span id="ly-qr-val">${layoutConfig.qrSizePercent}</span>% de la largeur)</label>
+          <input class="layout-slider" type="range" id="ly-qr" min="15" max="50" step="1" value="${layoutConfig.qrSizePercent}">
         </div>
         <div class="field">
           <label>Espacement (<span id="ly-gap-val">${layoutConfig.gapMm}</span>mm)</label>
@@ -996,48 +1008,20 @@ function wireLayoutPanel(){
     const cell = document.getElementById('layoutPreviewCell');
     if(!cell) return;
     cell.innerHTML = '';
-    if(!barcodeLibReady()) return;
-    const svgNs = 'http://www.w3.org/2000/svg';
-    const svg = document.createElementNS(svgNs,'svg');
-    cell.appendChild(svg);
-    const codeDiv = document.createElement('div');
-    codeDiv.className = 'cell-code';
-    codeDiv.textContent = fullCode(sampleAgent);
-    cell.appendChild(codeDiv);
-    const nameDiv = document.createElement('div');
-    nameDiv.className = 'cell-name';
-    nameDiv.textContent = sampleAgent.nom + ' ' + sampleAgent.prenom;
-    cell.appendChild(nameDiv);
-    try{
-      JsBarcode(svg, barcodeValue(sampleAgent), { format:BARCODE_FORMAT, displayValue:false, margin:2, width:1.4, height:34 });
-      fixSvgViewBox(svg);
-    }catch(e){}
+    if(!qrLibReady()) return;
+    const { canvas } = fillLabelCell(cell, 'sheet-cell', fullCode(sampleAgent), sampleAgent.nom + ' ' + sampleAgent.prenom);
+    renderQr(canvas, qrValue(sampleAgent), 200);
   }
 
   function renderLayoutSheetPreview(){
     const wrap = document.getElementById('layoutSheetPreview');
     if(!wrap) return;
     wrap.innerHTML = '';
-    if(!barcodeLibReady()) return;
-    const svgNs = 'http://www.w3.org/2000/svg';
+    if(!qrLibReady()) return;
     for(let i=0;i<10;i++){
-      const cell = document.createElement('div');
-      cell.className = 'sheet-cell';
-      const svg = document.createElementNS(svgNs,'svg');
-      cell.appendChild(svg);
-      const codeDiv = document.createElement('div');
-      codeDiv.className = 'cell-code';
-      codeDiv.textContent = fullCode(sampleAgent);
-      cell.appendChild(codeDiv);
-      const nameDiv = document.createElement('div');
-      nameDiv.className = 'cell-name';
-      nameDiv.textContent = sampleAgent.nom + ' ' + sampleAgent.prenom;
-      cell.appendChild(nameDiv);
+      const { cell, canvas } = createLabelCell('sheet-cell', fullCode(sampleAgent), sampleAgent.nom + ' ' + sampleAgent.prenom);
       wrap.appendChild(cell);
-      try{
-        JsBarcode(svg, barcodeValue(sampleAgent), { format:BARCODE_FORMAT, displayValue:false, margin:2, width:1.4, height:34 });
-        fixSvgViewBox(svg);
-      }catch(e){}
+      renderQr(canvas, qrValue(sampleAgent), 200);
     }
   }
 
@@ -1066,8 +1050,7 @@ function wireLayoutPanel(){
       if(onChange) onChange();
     });
   };
-  bindSlider('ly-barcode', 'ly-barcode-val', 'barcodeWidthPercent', false, renderLayoutPreview);
-  bindSlider('ly-barcode-h', 'ly-barcode-h-val', 'barcodeHeightPercent', false, renderLayoutPreview);
+  bindSlider('ly-qr', 'ly-qr-val', 'qrSizePercent', false, renderLayoutPreview);
   bindSlider('ly-gap', 'ly-gap-val', 'gapMm', true, renderLayoutPreview);
   bindSlider('ly-code-size', 'ly-code-size-val', 'codeFontPt', true, renderLayoutPreview);
   bindSlider('ly-name-size', 'ly-name-size-val', 'nameFontPt', true, renderLayoutPreview);
@@ -1229,73 +1212,87 @@ function confirmDelete(agent){
 }
 
 /* ===================== Barcodes ===================== */
-function barcodeLibReady(){
-  if(typeof JsBarcode === 'undefined'){
-    showToast("La librairie de code-barres n'a pas pu se charger (connexion réseau). Rechargez la page.");
+function qrLibReady(){
+  if(typeof QRCode === 'undefined'){
+    showToast("La librairie de QR code n'a pas pu se charger (connexion réseau). Rechargez la page.");
     return false;
   }
   return true;
 }
 
-function fixSvgViewBox(svg){
-  // JsBarcode sets width/height attributes but no viewBox; without a viewBox,
-  // CSS-driven resizing clips the drawing instead of scaling it. Adding a
-  // viewBox makes the barcode scale correctly and stay visible at any size.
-  // preserveAspectRatio="none" lets width/height be set independently (e.g.
-  // full label width + fixed half height) — a uniform horizontal stretch
-  // doesn't break barcode readability since all bars scale together.
-  const w = parseFloat(svg.getAttribute('width'));
-  const h = parseFloat(svg.getAttribute('height'));
-  if(w && h){
-    svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-    svg.setAttribute('preserveAspectRatio', 'none');
-    svg.removeAttribute('width');
-    svg.removeAttribute('height');
-  }
+/* Construit la structure DOM d'une étiquette : QR (coin haut-droite) + bloc
+   texte (code + nom) sur le reste. cellClass = 'sheet-cell' (écran) ou
+   'p-cell' (impression) ; les noms de sous-classes suivent le même préfixe. */
+function createLabelCell(cellClass, codeText, nameText){
+  const isPrint = cellClass === 'p-cell';
+  const prefix = isPrint ? 'p' : 'cell';
+  const cell = document.createElement('div');
+  cell.className = cellClass;
+
+  const qrWrap = document.createElement('div');
+  qrWrap.className = isPrint ? 'p-qr-wrap' : 'cell-qr-wrap';
+  const canvas = document.createElement('canvas');
+  qrWrap.appendChild(canvas);
+  cell.appendChild(qrWrap);
+
+  const textBlock = document.createElement('div');
+  textBlock.className = isPrint ? 'p-textblock' : 'cell-textblock';
+  const codeDiv = document.createElement('div');
+  codeDiv.className = `${prefix}-code`;
+  codeDiv.textContent = codeText;
+  textBlock.appendChild(codeDiv);
+  const nameDiv = document.createElement('div');
+  nameDiv.className = `${prefix}-name`;
+  nameDiv.textContent = nameText;
+  textBlock.appendChild(nameDiv);
+  cell.appendChild(textBlock);
+
+  return { cell, canvas };
 }
 
-function renderLivePreviewBarcode(agent){
-  if(!barcodeLibReady()) return;
-  const svg = document.getElementById('livePreviewSvg');
-  try{
-    JsBarcode(svg, barcodeValue(agent), { format:BARCODE_FORMAT, displayValue:false, margin:4, width:2, height:50 });
-    fixSvgViewBox(svg);
-  }catch(e){ console.error(e); }
+/* Variante qui remplit un conteneur déjà existant (utilisée par l'aperçu
+   unique du panneau de mise en page) plutôt que d'en créer un nouveau. */
+function fillLabelCell(existingCell, cellClass, codeText, nameText){
+  const { cell: built, canvas } = createLabelCell(cellClass, codeText, nameText);
+  while(built.firstChild){ existingCell.appendChild(built.firstChild); }
+  return { canvas };
 }
 
-function renderSheetPreview(agent){
+function renderQr(canvas, value, sizePx){
+  return QRCode.toCanvas(canvas, value, {
+    width: sizePx,
+    margin: 0,
+    errorCorrectionLevel: 'M',
+    color: { dark: '#000000', light: '#ffffff' }
+  }).catch(e => console.error('Erreur génération QR', e));
+}
+
+async function renderLivePreviewQR(agent){
+  if(!qrLibReady()) return;
+  const canvas = document.getElementById('livePreviewCanvas');
+  await renderQr(canvas, qrValue(agent), 150);
+}
+
+async function renderSheetPreview(agent){
   const wrap = document.getElementById('sheetPreview');
   wrap.innerHTML = '';
-  if(!barcodeLibReady()) return;
+  if(!qrLibReady()) return;
+  const jobs = [];
   for(let i=0;i<10;i++){
-    const cell = document.createElement('div');
-    cell.className = 'sheet-cell';
-    const svgNs = 'http://www.w3.org/2000/svg';
-    const svg = document.createElementNS(svgNs,'svg');
-    cell.appendChild(svg);
-    const codeDiv = document.createElement('div');
-    codeDiv.className = 'cell-code';
-    codeDiv.textContent = fullCode(agent);
-    cell.appendChild(codeDiv);
-    const nameDiv = document.createElement('div');
-    nameDiv.className = 'cell-name';
-    nameDiv.textContent = agent.nom + ' ' + agent.prenom;
-    cell.appendChild(nameDiv);
+    const { cell, canvas } = createLabelCell('sheet-cell', fullCode(agent), agent.nom + ' ' + agent.prenom);
     wrap.appendChild(cell);
-    try{
-      JsBarcode(svg, barcodeValue(agent), { format:BARCODE_FORMAT, displayValue:false, margin:2, width:1.4, height:34 });
-      fixSvgViewBox(svg);
-    }catch(e){}
+    jobs.push(renderQr(canvas, qrValue(agent), 200));
   }
+  await Promise.all(jobs);
 }
 
-function printSheet(agent, qty){
-  if(!barcodeLibReady()) return;
+async function printSheet(agent, qty){
+  if(!qrLibReady()) return;
   qty = Math.max(1, Math.min(2000, qty || 1));
   const holder = document.getElementById('printSheet');
   holder.innerHTML = '';
-  const svgNs = 'http://www.w3.org/2000/svg';
   const startNum = agent.numero;
+  const jobs = [];
 
   for(let p=0; p<qty; p++){
     const pageNum = startNum + p;
@@ -1304,32 +1301,22 @@ function printSheet(agent, qty){
     const page = document.createElement('div');
     page.className = 'sheet-page';
     for(let i=0;i<10;i++){
-      const cell = document.createElement('div');
-      cell.className = 'p-cell';
-      const svg = document.createElementNS(svgNs,'svg');
-      cell.appendChild(svg);
-      const codeDiv = document.createElement('div');
-      codeDiv.className = 'p-code';
-      codeDiv.textContent = agent.code + padNum(pageNum);
-      cell.appendChild(codeDiv);
-      const nameDiv = document.createElement('div');
-      nameDiv.className = 'p-name';
-      nameDiv.textContent = agent.nom + ' ' + agent.prenom;
-      cell.appendChild(nameDiv);
+      const { cell, canvas } = createLabelCell('p-cell', agent.code + padNum(pageNum), agent.nom + ' ' + agent.prenom);
       page.appendChild(cell);
-      try{
-        JsBarcode(svg, barcodeValue(agent), { format:BARCODE_FORMAT, displayValue:false, margin:1, width:1, height:20 });
-        fixSvgViewBox(svg);
-      }catch(e){}
+      jobs.push(renderQr(canvas, qrValue(agent), 120));
     }
     frame.appendChild(page);
     holder.appendChild(frame);
   }
 
+  await Promise.all(jobs);
+
   // window.print() must be called synchronously, in direct response to the
   // click, or some browsers silently drop the dialog because the "user
   // gesture" context has expired (this is why an earlier version — which
   // awaited a setTimeout first — sometimes failed to open the dialog).
+  // Promise/microtask-based awaits (like above) generally preserve the
+  // gesture, unlike setTimeout (a macrotask).
   window.print();
 
   agent.numero = startNum + qty;
