@@ -297,7 +297,7 @@
     border:1px solid var(--border);
     border-radius:8px;
     padding:14px;
-    background:var(--surface-2);
+    background:var(--surface);
   }
   .sheet-frame .frame-label{
     font-family:'IBM Plex Mono',monospace;
@@ -458,7 +458,9 @@
       box-sizing:border-box;
     }
     @page{ size:50mm 60mm; margin:0; }
-    html,body{ margin:0; padding:0; }
+    html,body{ margin:0; padding:0; background:#fff !important; }
+    #printSheet{ background:#fff !important; }
+    .p-cell{ background:#fff !important; }
     .p-cell{
       position:relative;
       border:0.15mm dashed #aaa;
