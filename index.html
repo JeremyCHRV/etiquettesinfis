@@ -496,9 +496,8 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const SUPABASE_URL = SUPABASE_URL_RAW.trim().replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/,'');
 const SUPABASE_CONFIGURED = !SUPABASE_URL_RAW.includes('YOUR-PROJECT') && !SUPABASE_ANON_KEY.includes('YOUR-ANON');
 
-/* Préfixe ajouté devant les 4 lettres du code, à l'intérieur du code-barres
-   lui-même (ex: code "COJE" -> valeur scannée "PL=COJE"). */
-const BARCODE_PREFIX = "PL=";
+/* Format du code-barres et valeur encodée (les 4 lettres du code, sans préfixe). */
+const BARCODE_FORMAT = "CODE39"; // "Code 139" n'existe pas comme norme — Code 39 est la norme la plus proche et très répandue
 
 async function supabaseGetRow(id){
   const url = `${SUPABASE_URL}/rest/v1/app_state?id=eq.${encodeURIComponent(id)}&select=data`;
@@ -654,7 +653,7 @@ function normalize(s){
   return (s||'').toString().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
 }
 function padNum(n){ return String(n).padStart(5,'0'); }
-function barcodeValue(a){ return BARCODE_PREFIX + a.code; } // valeur réellement encodée dans le code-barres
+function barcodeValue(a){ return a.code; } // valeur réellement encodée dans le code-barres
 function fullCode(a){ return a.code + padNum(a.numero); }
 
 function codeCounts(){
@@ -973,7 +972,7 @@ function wireLayoutPanel(){
     nameDiv.textContent = sampleAgent.nom + ' ' + sampleAgent.prenom;
     cell.appendChild(nameDiv);
     try{
-      JsBarcode(svg, barcodeValue(sampleAgent), { format:'CODE128', displayValue:false, margin:2, width:1.4, height:34 });
+      JsBarcode(svg, barcodeValue(sampleAgent), { format:BARCODE_FORMAT, displayValue:false, margin:2, width:1.4, height:34 });
       fixSvgViewBox(svg);
     }catch(e){}
   }
@@ -999,7 +998,7 @@ function wireLayoutPanel(){
       cell.appendChild(nameDiv);
       wrap.appendChild(cell);
       try{
-        JsBarcode(svg, barcodeValue(sampleAgent), { format:'CODE128', displayValue:false, margin:2, width:1.4, height:34 });
+        JsBarcode(svg, barcodeValue(sampleAgent), { format:BARCODE_FORMAT, displayValue:false, margin:2, width:1.4, height:34 });
         fixSvgViewBox(svg);
       }catch(e){}
     }
@@ -1218,7 +1217,7 @@ function renderLivePreviewBarcode(agent){
   if(!barcodeLibReady()) return;
   const svg = document.getElementById('livePreviewSvg');
   try{
-    JsBarcode(svg, barcodeValue(agent), { format:'CODE128', displayValue:false, margin:4, width:2, height:50 });
+    JsBarcode(svg, barcodeValue(agent), { format:BARCODE_FORMAT, displayValue:false, margin:4, width:2, height:50 });
     fixSvgViewBox(svg);
   }catch(e){ console.error(e); }
 }
@@ -1243,7 +1242,7 @@ function renderSheetPreview(agent){
     cell.appendChild(nameDiv);
     wrap.appendChild(cell);
     try{
-      JsBarcode(svg, barcodeValue(agent), { format:'CODE128', displayValue:false, margin:2, width:1.4, height:34 });
+      JsBarcode(svg, barcodeValue(agent), { format:BARCODE_FORMAT, displayValue:false, margin:2, width:1.4, height:34 });
       fixSvgViewBox(svg);
     }catch(e){}
   }
@@ -1276,7 +1275,7 @@ function printSheet(agent, qty){
       cell.appendChild(nameDiv);
       page.appendChild(cell);
       try{
-        JsBarcode(svg, barcodeValue(agent), { format:'CODE128', displayValue:false, margin:1, width:1, height:20 });
+        JsBarcode(svg, barcodeValue(agent), { format:BARCODE_FORMAT, displayValue:false, margin:1, width:1, height:20 });
         fixSvgViewBox(svg);
       }catch(e){}
     }
